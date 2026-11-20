@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>RONIN — 3D Cyber Katana</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #070312;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #ffffff;
+      touch-action: none;
+    }
+
+    #game-canvas, #slash-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    #slash-canvas {
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    /* HUD */
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+      z-index: 10;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .hud-card {
+      background: rgba(16, 8, 30, 0.62);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      padding: 8px 13px;
+    }
+
+    .score-label {
+      font-size: 10px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: #b49be0;
+      font-weight: 700;
+    }
+
+    .score-val {
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1.05;
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(0, 245, 255, 0.55);
+    }
+
+    .hearts-row {
+      margin-top: 5px;
+      display: flex;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .heart-lost {
+      opacity: 0.22;
+      filter: grayscale(1);
+    }
+
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .soul-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 16px;
+      color: #ffd84d;
+    }
+
+    .icon-btn {
+      pointer-events: auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(16, 8, 30, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* Burst Bar */
+    .burst-wrap {
+      width: min(260px, 68vw);
+      margin: 8px auto 0;
+      text-align: center;
+    }
+
+    .burst-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 4px;
+      color: #e4d4ff;
+      text-transform: uppercase;
+    }
+
+    .burst-bar-bg {
+      height: 9px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .burst-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00f5ff, #b829ff, #ffd84d);
+      border-radius: 999px;
+      transition: width 0.12s linear;
+      box-shadow: 0 0 12px rgba(184, 41, 255, 0.8);
+    }
+
+    .burst-active .burst-label {
+      color: #ffd84d;
+      animation: pulseText 0.4s infinite alternate;
+    }
+
+    @keyframes pulseText {
+      from { transform: scale(1); text-shadow: 0 0 6px #ffd84d; }
+      to { transform: scale(1.08); text-shadow: 0 0 18px #b829ff; }
+    }
+
+    #combo-badge {
+      position: fixed;
+      top: 118px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #ffd84d;
+      text-shadow: 0 0 14px rgba(255, 216, 77, 0.85);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.15s;
+      pointer-events: none;
+      z-index: 12;
+    }
+
+    #popup-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 15;
+      overflow: hidden;
+    }
+
+    .float-msg {
+      position: absolute;
+      left: 50%;
+      top: 36%;
+      transform: translate(-50%, -50%);
+      font-weight: 900;
+      font-size: 21px;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+      animation: floatUp 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translate(-50%, -15%) scale(0.7); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+      100% { opacity: 0; transform: translate(-50%, -145%) scale(0.95); }
+    }
+
+    .hud-bottom-hint {
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.58);
+      letter-spacing: 0.8px;
+      font-weight: 600;
+    }
+
+    /* Overlay Screens */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: radial-gradient(circle at center, rgba(24, 10, 46, 0.65), rgba(5, 2, 12, 0.9));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 20;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 390px;
+      background: rgba(16, 10, 34, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 24px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(184, 41, 255, 0.16);
+    }
+
+    .proto-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(184, 41, 255, 0.2);
+      color: #df9eff;
+      border: 1px solid rgba(184, 41, 255, 0.45);
+      margin-bottom: 10px;
+    }
+
+    h1.title {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, #ffffff 10%, #00f5ff 50%, #ff2b7a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #baa8db;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .stat-box .lbl {
+      font-size: 10px;
+      color: #a492c7;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-weight: 700;
+    }
+
+    .stat-box .num {
+      font-size: 22px;
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+      cursor: pointer;
+      transition: transform 0.1s;
+      margin-bottom: 10px;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ff2b7a, #b829ff);
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(255, 43, 122, 0.35);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.09);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #ffd84d, #ff8800);
+      color: #1f0e00;
+    }
+
+    .btn-yt {
+      background: linear-gradient(135deg, #ff1e3c, #c40022);
+      color: #ffffff;
+      font-size: 13px;
+      padding: 12px 14px;
+    }
+
+    .controls-box {
+      margin-top: 6px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+      color: #baa8db;
+      line-height: 1.5;
+    }
+
+    .controls-box b { color: #ffffff; }
+
+    /* Blade Shop */
+    .blade-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 14px 0 18px;
+      text-align: left;
+    }
+
+    .blade-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .blade-card.equipped {
+      border-color: #ff2b7a;
+      background: rgba(255, 43, 122, 0.12);
+    }
+
+    .blade-name { font-weight: 800; font-size: 15px; }
+    .blade-desc { font-size: 11px; color: #baa8db; margin-top: 2px; }
+
+    .blade-btn {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .blade-btn.equip { background: #00f5ff; color: #02121f; }
+    .blade-btn.active { background: rgba(255, 43, 122, 0.25); color: #ff7aa8; border: 1px solid #ff2b7a; }
+    .blade-btn.buy { background: #ffd84d; color: #1b0d00; }
+    .blade-btn.locked { background: rgba(255,255,255,0.1); color: #8b7ca8; }
+
+    .new-record {
+      display: inline-block;
+      background: #ffd84d;
+      color: #1f0e00;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+
+    #flash-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: #ffffff;
+      opacity: 0;
+      z-index: 18;
+      transition: opacity 0.08s;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="game-canvas"></canvas>
+  <canvas id="slash-canvas"></canvas>
+  <div id="flash-overlay"></div>
+  <div id="popup-layer"></div>
+  <div id="combo-badge">COMBO x2</div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div>
+      <div class="hud-top">
+        <div class="hud-card">
+          <div class="score-label">Score</div>
+          <div class="score-val" id="hud-score">0</div>
+          <div class="hearts-row" id="hud-hearts">❤️❤️❤️❤️</div>
+        </div>
+        <div class="hud-right">
+          <div class="hud-card soul-pill">
+            <span>⚡</span>
+            <span id="hud-souls">0</span>
+          </div>
+          <button class="icon-btn" id="btn-mute" aria-label="Toggle Sound">🔊</button>
+        </div>
+      </div>
+
+      <div class="burst-wrap" id="burst-wrap">
+        <div class="burst-label" id="burst-label">Blade Burst 0%</div>
+        <div class="burst-bar-bg">
+          <div class="burst-bar-fill" id="burst-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-bottom-hint">SLICE CORES • PARRY WHITE DARTS • DODGE DARK MINES 💣</div>
+  </div>
+
+  <!-- START MENU -->
+  <div class="overlay" id="menu-screen">
+    <div class="panel">
+      <div class="proto-tag">3D CYBER KATANA</div>
+      <h1 class="title">RONIN</h1>
+      <p class="subtitle">Swipe to slice incoming 3D cores in half, parry white laser darts, and unleash Blade Burst!</p>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="lbl">Best Score</div>
+          <div class="num" id="menu-best">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">Energy Souls</div>
+          <div class="num" style="color:#ffd84d" id="menu-souls">0</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-play">DRAW BLADE</button>
+      <button class="btn btn-secondary" id="btn-shop">KATANA BLADES</button>
+      <a class="btn btn-yt" href="https://www.youtube.com/@SHONENSTREAMHAKAI" target="_blank" rel="noopener noreferrer">▶ YOUTUBE: @SHONENSTREAMHAKAI</a>
+
+      <div class="controls-box">
+        ⚔️ <b>Slice:</b> Cyan/Pink Cubes & Gold Stars<br/>
+        🛡️ <b>Parry:</b> Swipe White Laser Darts before impact<br/>
+        💣 <b>Dodge:</b> Dark Spiky Mines (until Burst Mode!)
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="gameover-screen">
+    <div class="panel">
+      <div class="new-record hidden" id="new-record-badge">★ NEW PERSONAL BEST ★</div>
+      <h1 class="title" style="font-size:30px;">BLADE BROKEN!</h1>
+      <p class="subtitle" id="gameover-sub">Chain multiple slices in ONE swipe for massive combos!</p>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="lbl">Run Score</div>
+          <div class="num" id="go-score">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">Best Score</div>
+          <div class="num" style="color:#00f5ff" id="go-best">0</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-retry">SLASH AGAIN</button>
+      <button class="btn btn-gold" id="btn-share">CHALLENGE FRIENDS</button>
+      <button class="btn btn-secondary" id="btn-go-shop">KATANA BLADES</button>
+      <a class="btn btn-yt" href="https://www.youtube.com/@SHONENSTREAMHAKAI" target="_blank" rel="noopener noreferrer">▶ SUBSCRIBE: @SHONENSTREAMHAKAI</a>
+    </div>
+  </div>
+
+  <!-- BLADE SHOP -->
+  <div class="overlay hidden" id="shop-screen">
+    <div class="panel">
+      <h1 class="title" style="font-size:28px;">BLADE FORGE</h1>
+      <p class="subtitle">Your Souls: <b style="color:#ffd84d" id="shop-souls">0</b></p>
+
+      <div class="blade-list" id="blade-list"></div>
+
+      <button class="btn btn-primary" id="btn-shop-back">BACK</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------------- SAFE STORAGE ----------------
+  const memStore = {};
+  function saveVal(k, v) {
+    memStore[k] = String(v);
+    try { localStorage.setItem(k, String(v)); } catch (e) {}
+  }
+  function loadVal(k, fallback) {
+    try {
+      const v = localStorage.getItem(k);
+      if (v !== null) return v;
+    } catch (e) {}
+    return memStore[k] !== undefined ? memStore[k] : fallback;
+  }
+
+  let bestScore = parseInt(loadVal("ronin_best", "0"), 10) || 0;
+  let totalSouls = parseInt(loadVal("ronin_souls", "0"), 10) || 0;
+  let ownedBlades = JSON.parse(loadVal("ronin_blades", '["cyan"]'));
+  let equippedBlade = loadVal("ronin_blade", "cyan");
+  let isMuted = loadVal("ronin_muted", "0") === "1";
+
+  const BLADES = [
+    { id: "cyan", name: "Cyber Azure", desc: "Electric cyan plasma katana arc", cost: 0, hex: "#00f5ff", num: 0x00f5ff },
+    { id: "crimson", name: "Crimson Oni", desc: "Blood-red demon slayer slash", cost: 25, hex: "#ff2b5e", num: 0xff2b5e },
+    { id: "void", name: "Void Violet", desc: "Dark purple anime lightning edge", cost: 50, hex: "#c84bff", num: 0xc84bff },
+    { id: "solar", name: "Solar Emperor", desc: "Blazing golden hyper-katana", cost: 90, hex: "#ffd84d", num: 0xffd84d }
+  ];
+
+  // ---------------- SOUND & CYBER-SAMURAI MUSIC ENGINE ----------------
+  let audioCtx = null, masterBus = null, musicBus = null, noiseBuffer = null;
+
+  function ensureAudio() {
+    if (isMuted) return null;
+    try {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        audioCtx = new AC();
+        const comp = audioCtx.createDynamicsCompressor();
+        comp.threshold.value = -14;
+        comp.ratio.value = 6;
+        comp.connect(audioCtx.destination);
+        masterBus = comp;
+
+        musicBus = audioCtx.createGain();
+        musicBus.gain.value = 0.34;
+        musicBus.connect(masterBus);
+
+        const len = Math.floor(audioCtx.sampleRate * 0.25);
+        noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) {}
+    return audioCtx;
+  }
+
+  function playTone(freq, endFreq, dur, type = "sine", vol = 0.14) {
+    const ctx = ensureAudio();
+    if (!ctx || !masterBus) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), ctx.currentTime + dur);
+      gain.gain.setValueAtTime(vol, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(masterBus);
+      osc.start();
+      osc.stop(ctx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function playWhoosh() {
+    const ctx = ensureAudio();
+    if (!ctx || !noiseBuffer || !masterBus) return;
+    try {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(900, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(2800, ctx.currentTime + 0.08);
+      filter.Q.value = 2.5;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterBus);
+      src.start();
+      src.stop(ctx.currentTime + 0.1);
+    } catch (e) {}
+  }
+
+  const sfx = {
+    whoosh: playWhoosh,
+    slice: (combo) => {
+      playTone(620 + combo * 55, 1380 + combo * 70, 0.11, "triangle", 0.16);
+      playTone(240, 90, 0.09, "sawtooth", 0.09);
+    },
+    parry: () => {
+      playTone(1180, 1760, 0.24, "sine", 0.2);
+      playTone(1580, 2320, 0.2, "triangle", 0.14);
+    },
+    gold: () => {
+      playTone(740, 1480, 0.18, "triangle", 0.17);
+      setTimeout(() => playTone(980, 1960, 0.16, "sine", 0.14), 50);
+    },
+    burst: () => {
+      playTone(180, 960, 0.4, "sawtooth", 0.16);
+      setTimeout(() => playTone(360, 1440, 0.35, "triangle", 0.15), 70);
+    },
+    hit: () => {
+      playTone(160, 35, 0.32, "sawtooth", 0.22);
+      playTone(110, 28, 0.35, "square", 0.14);
+    }
+  };
+
+  const SAMURAI_BASS = [82.41, 87.31, 82.41, 110.0];
+  const SAMURAI_SCALE = [329.63, 349.23, 415.30, 440.0, 493.88, 523.25, 659.25];
+  const MELODY_PATTERN = [0, 2, 3, 2, 1, 0, 4, 3, 0, 2, 5, 4, 3, 2, 1, 0];
+  let musicStep = 0;
+  let nextNoteTime = 0;
+
+  function scheduleSamuraiBeat() {
+    if (state !== "playing" || isMuted || document.hidden || !audioCtx || !musicBus) return;
+    if (audioCtx.state === "suspended") return;
+
+    const bpm = burstTimer > 0 ? 148 : 132;
+    const stepDur = 60 / bpm / 4;
+    if (nextNoteTime < audioCtx.currentTime) nextNoteTime = audioCtx.currentTime + 0.03;
+
+    while (nextNoteTime < audioCtx.currentTime + 0.12) {
+      const bar = Math.floor(musicStep / 16) % 4;
+      const s = musicStep % 16;
+
+      if (s === 0 || s === 6 || s === 8 || s === 14) {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(125, nextNoteTime);
+        osc.frequency.exponentialRampToValueAtTime(40, nextNoteTime + 0.12);
+        g.gain.setValueAtTime(0.62, nextNoteTime);
+        g.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + 0.16);
+        osc.connect(g); g.connect(musicBus);
+        osc.start(nextNoteTime); osc.stop(nextNoteTime + 0.17);
+      }
+
+      if ((s === 4 || s === 12) && noiseBuffer) {
+        const src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer;
+        const f = audioCtx.createBiquadFilter();
+        f.type = "highpass"; f.frequency.value = 1200;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.28, nextNoteTime);
+        g.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + 0.13);
+        src.connect(f); f.connect(g); g.connect(musicBus);
+        src.start(nextNoteTime); src.stop(nextNoteTime + 0.14);
+      }
+
+      const bOsc = audioCtx.createOscillator();
+      const bFilt = audioCtx.createBiquadFilter();
+      const bGain = audioCtx.createGain();
+      bOsc.type = "sawtooth";
+      const root = SAMURAI_BASS[bar];
+      bOsc.frequency.setValueAtTime(s % 2 === 0 ? root : root * 2, nextNoteTime);
+      bFilt.type = "lowpass"; bFilt.frequency.setValueAtTime(850, nextNoteTime);
+      bGain.gain.setValueAtTime(0.24, nextNoteTime);
+      bGain.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + stepDur * 0.85);
+      bOsc.connect(bFilt); bFilt.connect(bGain); bGain.connect(musicBus);
+      bOsc.start(nextNoteTime); bOsc.stop(nextNoteTime + stepDur);
+
+      if (s % 2 === 0 || burstTimer > 0) {
+        const mOsc = audioCtx.createOscillator();
+        const mGain = audioCtx.createGain();
+        mOsc.type = "triangle";
+        const note = SAMURAI_SCALE[MELODY_PATTERN[s]] * (burstTimer > 0 ? 1.5 : 1);
+        mOsc.frequency.setValueAtTime(note, nextNoteTime);
+        mGain.gain.setValueAtTime(0.14, nextNoteTime);
+        mGain.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + stepDur * 1.1);
+        mOsc.connect(mGain); mGain.connect(musicBus);
+        mOsc.start(nextNoteTime); mOsc.stop(nextNoteTime + stepDur * 1.15);
+      }
+
+      nextNoteTime += stepDur;
+      musicStep = (musicStep + 1) % 64;
+    }
+  }
+  setInterval(scheduleSamuraiBeat, 30);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!audioCtx) return;
+    try {
+      if (document.hidden) audioCtx.suspend();
+      else if (!isMuted) audioCtx.resume();
+    } catch (e) {}
+  });
+
+  // ---------------- THREE.JS 3D ARENA ----------------
+  const canvas = document.getElementById("game-canvas");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x070312);
+  scene.fog = new THREE.FogExp2(0x070312, 0.022);
+
+  const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 120);
+  camera.position.set(0, 1.4, 5.5);
+  camera.lookAt(0, 1.0, -20);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(8, 16, 12);
+  scene.add(dirLight);
+
+  const gridHelper = new THREE.GridHelper(90, 36, 0xb829ff, 0x261147);
+  gridHelper.position.set(0, -3.0, -32);
+  scene.add(gridHelper);
+
+  const gates = [];
+  const gateMat = new THREE.MeshBasicMaterial({ color: 0xb829ff, transparent: true, opacity: 0.32 });
+  const pillarGeo = new THREE.BoxGeometry(0.24, 10, 0.24);
+  const topBeamGeo = new THREE.BoxGeometry(10.5, 0.28, 0.32);
+
+  for (let i = 0; i < 8; i++) {
+    const g = new THREE.Group();
+    const pL = new THREE.Mesh(pillarGeo, gateMat);
+    pL.position.set(-4.6, 2, 0);
+    const pR = new THREE.Mesh(pillarGeo, gateMat);
+    pR.position.set(4.6, 2, 0);
+    const beam = new THREE.Mesh(topBeamGeo, gateMat);
+    beam.position.set(0, 6.2, 0);
+    g.add(pL, pR, beam);
+    g.position.z = -i * 11;
+    scene.add(g);
+    gates.push(g);
+  }
+
+  // ---------------- 2D KATANA SLASH OVERLAY ----------------
+  const slashCanvas = document.getElementById("slash-canvas");
+  const sCtx = slashCanvas.getContext("2d");
+  function resizeAll() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    slashCanvas.width = window.innerWidth;
+    slashCanvas.height = window.innerHeight;
+  }
+  resizeAll();
+  window.addEventListener("resize", resizeAll);
+
+  const slashTrail = [];
+
+  // ---------------- OBJECT POOLS & GEOMETRIES ----------------
+  const targets = [];
+  const halves = [];
+  const sparks = [];
+
+  const cubeGeo = new THREE.BoxGeometry(1.15, 1.15, 1.15);
+  const halfCubeGeo = new THREE.BoxGeometry(0.55, 1.15, 1.15);
+  const goldGeo = new THREE.OctahedronGeometry(0.75, 0);
+  const halfGoldGeo = new THREE.ConeGeometry(0.65, 0.75, 4);
+  const bombGeo = new THREE.IcosahedronGeometry(0.64, 0);
+  const bombWireGeo = new THREE.IcosahedronGeometry(0.76, 0);
+  const boltGeo = new THREE.ConeGeometry(0.42, 1.25, 6);
+  boltGeo.rotateX(Math.PI / 2);
+  const sparkGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+
+  const coreMat = new THREE.MeshStandardMaterial({ color: 0x00f5ff, emissive: 0x0088ff, emissiveIntensity: 0.65, roughness: 0.2 });
+  const magMat = new THREE.MeshStandardMaterial({ color: 0xff2b7a, emissive: 0xb8004c, emissiveIntensity: 0.65, roughness: 0.2 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd84d, emissive: 0xff9900, emissiveIntensity: 0.8, roughness: 0.15 });
+  const bombMat = new THREE.MeshStandardMaterial({ color: 0x16121c, roughness: 0.7, metalness: 0.3 });
+  const bombWireMat = new THREE.MeshBasicMaterial({ color: 0xff3b3b, wireframe: true });
+  const boltMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const parryRingMat = new THREE.MeshBasicMaterial({ color: 0xffd84d });
+
+  function spawnSparks(pos, colorHex, count = 14) {
+    const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(sparkGeo, mat);
+      m.position.copy(pos);
+      scene.add(m);
+      sparks.push({
+        mesh: m,
+        vx: (Math.random() - 0.5) * 14,
+        vy: (Math.random() - 0.3) * 12,
+        vz: (Math.random() - 0.5) * 10,
+        life: 0.45 + Math.random() * 0.3
+      });
+    }
+  }
+
+  function spawnSlicedHalves(pos, mat, isGold, swipeAng) {
+    const g = isGold ? halfGoldGeo : halfCubeGeo;
+    const nx = Math.sin(swipeAng);
+    const ny = Math.cos(swipeAng);
+
+    for (let side of [-1, 1]) {
+      const m = new THREE.Mesh(g, mat);
+      m.position.copy(pos);
+      m.position.x += nx * side * 0.22;
+      m.position.y += ny * side * 0.22;
+      scene.add(m);
+      halves.push({
+        mesh: m,
+        vx: nx * side * 5.2 + (Math.random() - 0.5) * 1.5,
+        vy: ny * side * 5.2 + 2.2,
+        vz: -2.0 + Math.random() * 3.0,
+        rx: (Math.random() - 0.5) * 12,
+        ry: (Math.random() - 0.5) * 12,
+        life: 0.75
+      });
+    }
+  }
+
+  // ---------------- GAME STATE ----------------
+  const MAX_HEARTS = 4;
+  let state = "menu";
+  let returnFromShop = "menu";
+
+  let score = 0;
+  let runSouls = 0;
+  let hearts = MAX_HEARTS;
+  let invulnTimer = 0;
+  let combo = 1;
+  let comboTimer = 0;
+  let burst = 0;
+  let burstTimer = 0;
+  let hitStop = 0;
+  let shakeTime = 0;
+  let shakeAmp = 0;
+  let spawnTimer = 0;
+  let elapsedRun = 0;
+
+  const hudEl = document.getElementById("hud");
+  const hudScore = document.getElementById("hud-score");
+  const hudHearts = document.getElementById("hud-hearts");
+  const hudSouls = document.getElementById("hud-souls");
+  const burstWrap = document.getElementById("burst-wrap");
+  const burstLabel = document.getElementById("burst-label");
+  const burstFill = document.getElementById("burst-fill");
+  const comboBadge = document.getElementById("combo-badge");
+  const popupLayer = document.getElementById("popup-layer");
+  const flashOverlay = document.getElementById("flash-overlay");
+
+  const menuScreen = document.getElementById("menu-screen");
+  const gameoverScreen = document.getElementById("gameover-screen");
+  const shopScreen = document.getElementById("shop-screen");
+
+  function getActiveBlade() {
+    return BLADES.find(b => b.id === equippedBlade) || BLADES[0];
+  }
+
+  function updateMenus() {
+    document.getElementById("menu-best").textContent = bestScore;
+    document.getElementById("menu-souls").textContent = totalSouls;
+    document.getElementById("btn-mute").textContent = isMuted ? "🔇" : "🔊";
+  }
+  updateMenus();
+
+  function updateHeartsUI() {
+    let html = "";
+    for (let i = 0; i < MAX_HEARTS; i++) {
+      html += `<span class="${i >= hearts ? "heart-lost" : ""}">❤️</span>`;
+    }
+    hudHearts.innerHTML = html;
+  }
+
+  function updateBurstUI() {
+    if (burstTimer > 0) {
+      burstFill.style.width = Math.max(0, (burstTimer / 6.0) * 100) + "%";
+      burstLabel.textContent = "⚡ BLADE BURST UNLEASHED! ⚡";
+      burstWrap.classList.add("burst-active");
+    } else {
+      burstFill.style.width = Math.min(100, burst) + "%";
+      burstLabel.textContent = `Blade Burst ${Math.floor(burst)}%`;
+      burstWrap.classList.remove("burst-active");
+    }
+  }
+
+  function showPopup(text, color = "#ffffff") {
+    const el = document.createElement("div");
+    el.className = "float-msg";
+    el.textContent = text;
+    el.style.color = color;
+    popupLayer.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  function flashScreen(color = "#ffffff", opacity = 0.35) {
+    flashOverlay.style.background = color;
+    flashOverlay.style.opacity = String(opacity);
+    setTimeout(() => { flashOverlay.style.opacity = "0"; }, 85);
+  }
+
+  function triggerShake(dur = 0.2, amp = 0.25) {
+    shakeTime = Math.max(shakeTime, dur);
+    shakeAmp = Math.max(shakeAmp, amp);
+  }
+
+  function clearArena() {
+    for (const t of targets) scene.remove(t.mesh);
+    targets.length = 0;
+    for (const h of halves) scene.remove(h.mesh);
+    halves.length = 0;
+    slashTrail.length = 0;
+  }
+
+  function startGame() {
+    ensureAudio();
+    clearArena();
+    score = 0;
+    runSouls = 0;
+    hearts = MAX_HEARTS;
+    invulnTimer = 0;
+    combo = 1;
+    comboTimer = 0;
+    burst = 0;
+    burstTimer = 0;
+    hitStop = 0;
+    shakeTime = 0;
+    spawnTimer = 0.35;
+    elapsedRun = 0;
+    musicStep = 0;
+    if (audioCtx) nextNoteTime = audioCtx.currentTime + 0.04;
+
+    scene.background.setHex(0x070312);
+    scene.fog.color.setHex(0x070312);
+    gateMat.color.setHex(0xb829ff);
+
+    hudScore.textContent = "0";
+    hudSouls.textContent = totalSouls;
+    updateHeartsUI();
+    updateBurstUI();
+
+    menuScreen.classList.add("hidden");
+    gameoverScreen.classList.add("hidden");
+    shopScreen.classList.add("hidden");
+    hudEl.style.display = "flex";
+    state = "playing";
+  }
+
+  function endGame() {
+    state = "gameover";
+    sfx.hit();
+    flashScreen("#ff1e3c", 0.5);
+    triggerShake(0.45, 0.5);
+    if (navigator.vibrate) navigator.vibrate(150);
+
+    const finalScore = Math.floor(score);
+    let isRecord = false;
+    if (finalScore > bestScore) {
+      bestScore = finalScore;
+      saveVal("ronin_best", bestScore);
+      isRecord = true;
+    }
+    saveVal("ronin_souls", totalSouls);
+    updateMenus();
+
+    document.getElementById("go-score").textContent = finalScore;
+    document.getElementById("go-best").textContent = bestScore;
+    document.getElementById("new-record-badge").classList.toggle("hidden", !isRecord);
+    document.getElementById("gameover-sub").textContent =
+      runSouls > 0
+        ? `Harvested +${runSouls} Energy Souls! Upgrade your blade in the Forge.`
+        : `Tip: Chain multiple slices in ONE swipe & parry white laser darts!`;
+
+    hudEl.style.display = "none";
+    comboBadge.style.opacity = "0";
+    gameoverScreen.classList.remove("hidden");
+  }
+
+  function takeDamage(reasonText) {
+    if (invulnTimer > 0 || state !== "playing") return;
+    invulnTimer = 0.85;
+    hearts -= 1;
+    combo = 1;
+    comboBadge.style.opacity = "0";
+    updateHeartsUI();
+    sfx.hit();
+    flashScreen("#ff1e3c", 0.42);
+    triggerShake(0.3, 0.38);
+    showPopup(reasonText, "#ff3b5c");
+    if (navigator.vibrate) navigator.vibrate(90);
+    if (hearts <= 0) endGame();
+  }
+
+  function activateBurst() {
+    burst = 100;
+    burstTimer = 6.0;
+    if (hearts < MAX_HEARTS) {
+      hearts += 1;
+      updateHeartsUI();
+    }
+    sfx.burst();
+    flashScreen("#ffd84d", 0.35);
+    triggerShake(0.3, 0.3);
+    showPopup("⚡ BLADE BURST! +1 ❤️", "#ffd84d");
+    scene.background.setHex(0x1b0729);
+    scene.fog.color.setHex(0x1b0729);
+    gateMat.color.setHex(0xffd84d);
+    if (navigator.vibrate) navigator.vibrate([30, 30, 60]);
+  }
+
+  // ---------------- SMART ANTI-OVERLAP SPAWNER ----------------
+  function isClearOfTargets(x, y, minSep = 2.15) {
+    for (const t of targets) {
+      if (Math.hypot(t.mesh.position.x - x, t.mesh.position.y - y) < minSep) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function spawnTargetWave() {
+    const count = burstTimer > 0 ? 3 : (Math.random() < 0.35 + Math.min(0.4, elapsedRun * 0.008) ? 2 : 1);
+    const hasActiveBomb = targets.some(t => t.kind === "bomb");
+
+    for (let i = 0; i < count; i++) {
+      const r = Math.random();
+      let kind = "core";
+      if (burstTimer <= 0) {
+        if (r < 0.12 && elapsedRun > 8 && !hasActiveBomb && i === count - 1) kind = "bomb";
+        else if (r < 0.27 && elapsedRun > 6) kind = "bolt";
+        else if (r < 0.40) kind = "gold";
+      } else {
+        if (r < 0.35) kind = "gold";
+      }
+
+      let startX = (Math.random() - 0.5) * 4.2;
+      let startY = -0.2 + Math.random() * 2.4;
+
+      if (kind === "bomb") {
+        let foundSafe = false;
+        for (let tries = 0; tries < 8; tries++) {
+          const tx = (Math.random() < 0.5 ? -1 : 1) * (1.8 + Math.random() * 1.1);
+          const ty = -0.2 + Math.random() * 2.4;
+          if (isClearOfTargets(tx, ty, 2.35)) {
+            startX = tx;
+            startY = ty;
+            foundSafe = true;
+            break;
+          }
+        }
+        if (!foundSafe) kind = "core";
+      }
+
+      const startZ = -40 - i * 4.2;
+
+      let mesh, mat, radius3d = 0.85;
+      if (kind === "core") {
+        mat = Math.random() < 0.5 ? coreMat : magMat;
+        mesh = new THREE.Mesh(cubeGeo, mat);
+      } else if (kind === "gold") {
+        mat = goldMat;
+        mesh = new THREE.Mesh(goldGeo, mat);
+        radius3d = 0.9;
+      } else if (kind === "bomb") {
+        const grp = new THREE.Group();
+        grp.add(new THREE.Mesh(bombGeo, bombMat));
+        grp.add(new THREE.Mesh(bombWireGeo, bombWireMat));
+        mesh = grp;
+        mat = bombMat;
+        radius3d = 0.45;
+      } else {
+        const grp = new THREE.Group();
+        grp.add(new THREE.Mesh(boltGeo, boltMat));
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.06, 6, 18), parryRingMat);
+        grp.add(ring);
+        mesh = grp;
+        mat = boltMat;
+        radius3d = 0.95;
+      }
+
+      mesh.position.set(startX, startY, startZ);
+      scene.add(mesh);
+
+      const baseSpeed = 14.5 + Math.min(14, elapsedRun * 0.22);
+      targets.push({
+        mesh,
+        mat,
+        kind,
+        radius3d,
+        vx: kind === "bomb" ? 0 : (Math.random() - 0.5) * 1.2,
+        vy: kind === "bomb" ? 0 : (Math.random() - 0.5) * 0.8,
+        vz: kind === "bolt" ? baseSpeed * 1.18 : baseSpeed,
+        rx: kind === "bolt" ? 0 : (Math.random() - 0.5) * 3.5,
+        ry: kind === "bolt" ? 0 : (Math.random() - 0.5) * 3.5
+      });
+    }
+  }
+
+  // ---------------- SWIPE SLICING MATH ----------------
+  function distPointToSeg(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  const projVec = new THREE.Vector3();
+  let swipeKills = 0;
+
+  function checkSwipeHits(x1, y1, x2, y2) {
+    if (state !== "playing") return;
+    const swipeSpeed = Math.hypot(x2 - x1, y2 - y1);
+    if (swipeSpeed < 3) return;
+
+    const swipeAng = Math.atan2(y2 - y1, x2 - x1);
+    const w = window.innerWidth, h = window.innerHeight;
+    const tanHalfFov = Math.tan((camera.fov * Math.PI) / 360);
+
+    for (let i = targets.length - 1; i >= 0; i--) {
+      const t = targets[i];
+      if (t.mesh.position.z > 2.2 || t.mesh.position.z < -34) continue;
+      if (t.kind === "bomb" && burstTimer <= 0 && t.mesh.position.z < -21) continue;
+
+      projVec.copy(t.mesh.position).project(camera);
+      if (projVec.z >= 1) continue;
+
+      const sx = (projVec.x * 0.5 + 0.5) * w;
+      const sy = (-projVec.y * 0.5 + 0.5) * h;
+
+      const depth = Math.max(2, camera.position.z - t.mesh.position.z);
+      const pad = (t.kind === "bomb" && burstTimer <= 0) ? 0 : 24;
+      const screenRad = (t.radius3d / (depth * tanHalfFov)) * (h * 0.5) + pad;
+
+      if (distPointToSeg(sx, sy, x1, y1, x2, y2) <= screenRad) {
+        if (t.kind === "bomb" && burstTimer <= 0) {
+          spawnSparks(t.mesh.position, 0xff2233, 24);
+          scene.remove(t.mesh);
+          targets.splice(i, 1);
+          takeDamage("MINE HIT! -1 ❤️");
+          continue;
+        }
+
+        const blade = getActiveBlade();
+        const isBurst = burstTimer > 0;
+        const fxColor = isBurst ? 0xffd84d : blade.num;
+
+        if (t.kind === "bolt") {
+          sfx.parry();
+          flashScreen("#ffffff", 0.25);
+          triggerShake(0.16, 0.22);
+          hitStop = 0.05;
+          spawnSparks(t.mesh.position, 0xffd84d, 20);
+          score += 75 * combo;
+          showPopup(`PARRY! +${75 * combo}`, "#ffd84d");
+          if (burstTimer <= 0) burst = Math.min(100, burst + 22);
+        } else if (t.kind === "gold") {
+          sfx.gold();
+          spawnSlicedHalves(t.mesh.position, t.mat, true, swipeAng);
+          spawnSparks(t.mesh.position, 0xffd84d, 18);
+          runSouls += 3;
+          totalSouls += 3;
+          hudSouls.textContent = totalSouls;
+          score += 50 * combo;
+          showPopup(`GOLD CORE! +3 ⚡`, "#ffd84d");
+          if (burstTimer <= 0) burst = Math.min(100, burst + 14);
+        } else {
+          sfx.slice(combo);
+          spawnSlicedHalves(t.mesh.position, t.mat, false, swipeAng);
+          spawnSparks(t.mesh.position, fxColor, 14);
+          runSouls += 1;
+          totalSouls += 1;
+          hudSouls.textContent = totalSouls;
+          score += 15 * combo;
+          if (burstTimer <= 0) burst = Math.min(100, burst + 8);
+        }
+
+        swipeKills += 1;
+        combo = Math.min(10, combo + 1);
+        comboTimer = 3.0;
+        comboBadge.textContent = swipeKills >= 2 ? `${swipeKills}x MULTI-SLASH! (x${combo})` : `COMBO x${combo}`;
+        comboBadge.style.opacity = "1";
+        comboBadge.style.transform = "translateX(-50%) scale(1.14)";
+        setTimeout(() => { comboBadge.style.transform = "translateX(-50%) scale(1)"; }, 110);
+
+        if (swipeKills >= 2) {
+          hitStop = 0.045;
+          triggerShake(0.12, 0.16);
+          if (swipeKills === 2) showPopup("DOUBLE SLASH!", blade.hex);
+          else if (swipeKills >= 3) showPopup(`${swipeKills}x HYPER SLASH!`, "#ffd84d");
+        }
+
+        if (navigator.vibrate) navigator.vibrate(15);
+        hudScore.textContent = Math.floor(score);
+        updateBurstUI();
+        if (burst >= 100 && burstTimer <= 0) activateBurst();
+
+        scene.remove(t.mesh);
+        targets.splice(i, 1);
+      }
+    }
+  }
+
+  let pointerDown = false;
+  let lastPX = 0, lastPY = 0, whooshCooldown = 0;
+
+  function onPointerStart(x, y) {
+    if (state !== "playing") return;
+    ensureAudio();
+    pointerDown = true;
+    lastPX = x;
+    lastPY = y;
+    swipeKills = 0;
+    slashTrail.push({ x, y, life: 0.16, brk: true });
+  }
+
+  function onPointerMove(x, y) {
+    if (!pointerDown || state !== "playing") return;
+    const dist = Math.hypot(x - lastPX, y - lastPY);
+    if (dist > 28 && performance.now() > whooshCooldown) {
+      sfx.whoosh();
+      whooshCooldown = performance.now() + 110;
+    }
+    checkSwipeHits(lastPX, lastPY, x, y);
+    slashTrail.push({ x, y, life: 0.16, brk: false });
+    lastPX = x;
+    lastPY = y;
+  }
+
+  function onPointerEnd() {
+    pointerDown = false;
+    swipeKills = 0;
+  }
+
+  canvas.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    onPointerStart(t.clientX, t.clientY);
+  }, { passive: false });
+  canvas.addEventListener("touchmove", (e) => {
+    if (state === "playing") e.preventDefault();
+    const t = e.touches[0];
+    onPointerMove(t.clientX, t.clientY);
+  }, { passive: false });
+  canvas.addEventListener("touchend", onPointerEnd);
+
+  canvas.addEventListener("mousedown", (e) => onPointerStart(e.clientX, e.clientY));
+  window.addEventListener("mousemove", (e) => onPointerMove(e.clientX, e.clientY));
+  window.addEventListener("mouseup", onPointerEnd);
+
+  // ---------------- BLADE SHOP UI ----------------
+  function renderShop() {
+    document.getElementById("shop-souls").textContent = totalSouls;
+    const list = document.getElementById("blade-list");
+    list.innerHTML = "";
+    for (const b of BLADES) {
+      const owned = ownedBlades.includes(b.id);
+      const isEq = equippedBlade === b.id;
+      const card = document.createElement("div");
+      card.className = "blade-card" + (isEq ? " equipped" : "");
+      card.innerHTML = `
+        <div>
+          <div class="blade-name" style="color:${b.hex}">${b.name}</div>
+          <div class="blade-desc">${b.desc}</div>
+        </div>
+      `;
+      const btn = document.createElement("button");
+      if (isEq) {
+        btn.className = "blade-btn active";
+        btn.textContent = "EQUIPPED";
+      } else if (owned) {
+        btn.className = "blade-btn equip";
+        btn.textContent = "EQUIP";
+        btn.onclick = () => {
+          equippedBlade = b.id;
+          saveVal("ronin_blade", equippedBlade);
+          renderShop();
+        };
+      } else if (totalSouls >= b.cost) {
+        btn.className = "blade-btn buy";
+        btn.textContent = `BUY (${b.cost} ⚡)`;
+        btn.onclick = () => {
+          totalSouls -= b.cost;
+          ownedBlades.push(b.id);
+          equippedBlade = b.id;
+          saveVal("ronin_souls", totalSouls);
+          saveVal("ronin_blades", JSON.stringify(ownedBlades));
+          saveVal("ronin_blade", equippedBlade);
+          updateMenus();
+          sfx.burst();
+          renderShop();
+        };
+      } else {
+        btn.className = "blade-btn locked";
+        btn.textContent = `${b.cost} ⚡`;
+      }
+      card.appendChild(btn);
+      list.appendChild(card);
+    }
+  }
+
+  document.getElementById("btn-play").onclick = startGame;
+  document.getElementById("btn-retry").onclick = startGame;
+
+  document.getElementById("btn-shop").onclick = () => {
+    returnFromShop = "menu";
+    menuScreen.classList.add("hidden");
+    renderShop();
+    shopScreen.classList.remove("hidden");
+  };
+  document.getElementById("btn-go-shop").onclick = () => {
+    returnFromShop = "gameover";
+    gameoverScreen.classList.add("hidden");
+    renderShop();
+    shopScreen.classList.remove("hidden");
+  };
+  document.getElementById("btn-shop-back").onclick = () => {
+    shopScreen.classList.add("hidden");
+    if (returnFromShop === "menu") menuScreen.classList.remove("hidden");
+    else gameoverScreen.classList.remove("hidden");
+  };
+
+  document.getElementById("btn-mute").onclick = () => {
+    isMuted = !isMuted;
+    saveVal("ronin_muted", isMuted ? "1" : "0");
+    document.getElementById("btn-mute").textContent = isMuted ? "🔇" : "🔊";
+    if (!isMuted) {
+      ensureAudio();
+      if (audioCtx) nextNoteTime = audioCtx.currentTime + 0.04;
+    }
+  };
+
+  document.getElementById("btn-share").onclick = async () => {
+    const s = Math.floor(score);
+    const liveUrl = window.location.href.startsWith("http") ? window.location.href : "";
+    const msg = liveUrl
+      ? `I just sliced a score of ${s} in RONIN! Can you beat my blade? Play here: ${liveUrl}`
+      : `I just sliced a score of ${s} in RONIN! Can you beat my blade?`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "RONIN Challenge", text: msg, url: liveUrl || undefined });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(msg);
+        showPopup("SCORE COPIED!", "#00f5ff");
+      }
+    } catch (e) {}
+  };
+
+  // ---------------- MAIN LOOP ----------------
+  let lastTime = performance.now();
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const rawDt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    if (invulnTimer > 0) invulnTimer -= rawDt;
+
+    let dt = rawDt;
+    if (hitStop > 0) {
+      hitStop -= rawDt;
+      dt = rawDt * 0.22;
+    }
+
+    sCtx.clearRect(0, 0, slashCanvas.width, slashCanvas.height);
+    for (let i = slashTrail.length - 1; i >= 0; i--) {
+      slashTrail[i].life -= rawDt;
+      if (slashTrail[i].life <= 0) slashTrail.splice(i, 1);
+    }
+    if (slashTrail.length > 1) {
+      const bladeHex = burstTimer > 0 ? "#ffd84d" : getActiveBlade().hex;
+      sCtx.lineCap = "round";
+      sCtx.lineJoin = "round";
+      for (let i = 1; i < slashTrail.length; i++) {
+        const p0 = slashTrail[i - 1], p1 = slashTrail[i];
+        if (p1.brk) continue;
+        const ratio = Math.max(0, p1.life / 0.16);
+        sCtx.strokeStyle = bladeHex;
+        sCtx.shadowColor = bladeHex;
+        sCtx.shadowBlur = 18;
+        sCtx.lineWidth = (burstTimer > 0 ? 18 : 12) * ratio;
+        sCtx.beginPath();
+        sCtx.moveTo(p0.x, p0.y);
+        sCtx.lineTo(p1.x, p1.y);
+        sCtx.stroke();
+
+        sCtx.shadowBlur = 0;
+        sCtx.strokeStyle = "#ffffff";
+        sCtx.lineWidth = 4 * ratio;
+        sCtx.beginPath();
+        sCtx.moveTo(p0.x, p0.y);
+        sCtx.lineTo(p1.x, p1.y);
+        sCtx.stroke();
+      }
+    }
+
+    const gateSpeed = state === "playing" ? (burstTimer > 0 ? 12 : 18) : 8;
+    for (const g of gates) {
+      g.position.z += gateSpeed * dt;
+      if (g.position.z > 8) g.position.z -= 88;
+    }
+
+    for (let i = halves.length - 1; i >= 0; i--) {
+      const h = halves[i];
+      h.life -= rawDt;
+      if (h.life <= 0) {
+        scene.remove(h.mesh);
+        halves.splice(i, 1);
+      } else {
+        h.vy -= 14 * rawDt;
+        h.mesh.position.x += h.vx * rawDt;
+        h.mesh.position.y += h.vy * rawDt;
+        h.mesh.position.z += h.vz * rawDt;
+        h.mesh.rotation.x += h.rx * rawDt;
+        h.mesh.rotation.y += h.ry * rawDt;
+        h.mesh.scale.setScalar(Math.max(0.05, h.life * 1.3));
+      }
+    }
+
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const sp = sparks[i];
+      sp.life -= rawDt;
+      if (sp.life <= 0) {
+        scene.remove(sp.mesh);
+        sparks.splice(i, 1);
+      } else {
+        sp.vy -= 12 * rawDt;
+        sp.mesh.position.x += sp.vx * rawDt;
+        sp.mesh.position.y += sp.vy * rawDt;
+        sp.mesh.position.z += sp.vz * rawDt;
+        sp.mesh.scale.setScalar(Math.max(0.05, sp.life * 1.6));
+      }
+    }
+
+    if (state === "playing") {
+      elapsedRun += dt;
+
+      if (burstTimer > 0) {
+        burstTimer -= rawDt;
+        if (burstTimer <= 0) {
+          burstTimer = 0;
+          burst = 0;
+          scene.background.setHex(0x070312);
+          scene.fog.color.setHex(0x070312);
+          gateMat.color.setHex(0xb829ff);
+        }
+        updateBurstUI();
+      }
+
+      if (combo > 1) {
+        comboTimer -= rawDt;
+        if (comboTimer <= 0) {
+          combo = 1;
+          comboBadge.style.opacity = "0";
+        }
+      }
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnTargetWave();
+        spawnTimer = burstTimer > 0 ? 0.55 : Math.max(0.52, 1.2 - elapsedRun * 0.01);
+      }
+
+      const slowFactor = burstTimer > 0 ? 0.62 : 1.0;
+      for (let i = targets.length - 1; i >= 0; i--) {
+        const t = targets[i];
+        t.mesh.position.x += t.vx * dt * slowFactor;
+        t.mesh.position.y += t.vy * dt * slowFactor;
+        t.mesh.position.z += t.vz * dt * slowFactor;
+        t.mesh.rotation.x += t.rx * dt;
+        t.mesh.rotation.y += t.ry * dt;
+
+        if (t.mesh.position.x > 3.1 || t.mesh.position.x < -3.1) t.vx *= -1;
+        if (t.mesh.position.y > 2.9 || t.mesh.position.y < -0.9) t.vy *= -1;
+
+        if (t.mesh.position.z > 3.2) {
+          const kind = t.kind;
+          scene.remove(t.mesh);
+          targets.splice(i, 1);
+
+          if (kind === "bolt") {
+            takeDamage("BOLT HIT YOU! -1 ❤️");
+          } else if (kind === "core" && burstTimer <= 0) {
+            takeDamage("MISSED CORE! -1 ❤️");
+          }
+          if (state !== "playing") break;
+        }
+      }
+    }
+
+    let cx = 0, cy = 1.4;
+    if (shakeTime > 0) {
+      shakeTime -= rawDt;
+      cx += (Math.random() - 0.5) * shakeAmp;
+      cy += (Math.random() - 0.5) * shakeAmp;
+    } else {
+      shakeAmp = 0;
+    }
+    camera.position.set(cx, cy, 5.5);
+
+    renderer.render(scene, camera);
+  }
+
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
