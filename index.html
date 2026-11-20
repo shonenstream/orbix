@@ -1,1007 +1,1750 @@
 <!DOCTYPE html>
 <html lang="en">
-<head<meta name="monetag" content="16b5f75df72e2c5ce529424c7ce9be2e">>
-    <meta name="monetag" content="16b5f75df72e2c5ce529424c7ce9be2e">
-    <meta name="monetag" content="16b5f75df72e2c5ce529424c7ce9be2e">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="monetag" content="16b5f75df72e2c5ce529424c7ce9be2e">
-    <title>Subway Runner 3D</title>
-    <meta name="monetag" content="16b5f75df72e2c5ce529424c7ce9be2e">
-    <style>
-    * {  
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-        }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>ORBIX — 360° Neon Roller</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #0d1117;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #ffffff;
-        }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #040510;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #ffffff;
+      touch-action: none;
+    }
 
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
 
-        /* HUD Overlay */
-        #hud {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 16px;
-        }
+    /* HUD */
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+      z-index: 10;
+    }
 
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 100%;
-        }
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
 
-        .stat-box {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 14px;
-            padding: 8px 16px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
+    .hud-card {
+      background: rgba(8, 12, 28, 0.58);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      padding: 8px 13px;
+    }
 
-        .stat-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #94a3b8;
-        }
+    .score-label {
+      font-size: 10px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: #8ea4d2;
+      font-weight: 700;
+    }
 
-        .stat-value {
-            font-size: 22px;
-            font-weight: 900;
-            color: #f8fafc;
-            line-height: 1.1;
-        }
+    .score-val {
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1.05;
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
+    }
 
-        .coin-val { color: #fbbf24; }
-        .score-val { color: #38bdf8; }
+    .zone-pill {
+      margin-top: 4px;
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 245, 255, 0.16);
+      color: #00f5ff;
+      border: 1px solid rgba(0, 245, 255, 0.35);
+    }
 
-        .multiplier-badge {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #fff;
-            font-weight: 900;
-            font-size: 13px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 4px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-        }
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        .board-status {
-            position: absolute;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            padding: 8px 18px;
-            border-radius: 30px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
-        }
+    .shard-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 16px;
+      color: #ffd84d;
+    }
 
-        .board-status.active {
-            opacity: 1;
-        }
+    .shard-dot {
+      width: 11px;
+      height: 11px;
+      background: #ffd84d;
+      transform: rotate(45deg);
+      box-shadow: 0 0 10px #ffd84d;
+      border-radius: 2px;
+    }
 
-        .board-timer {
-            width: 50px;
-            height: 6px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 3px;
-            overflow: hidden;
-        }
+    .icon-btn {
+      pointer-events: auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(8, 12, 28, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
 
-        .board-progress {
-            width: 100%;
-            height: 100%;
-            background: #38bdf8;
-            transform-origin: left;
-        }
+    /* Overdrive Bar */
+    .overdrive-wrap {
+      width: min(260px, 68vw);
+      margin: 8px auto 0;
+      text-align: center;
+    }
 
-        /* Screens Overlay */
-        .overlay-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 20;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(12px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 24px;
-            text-align: center;
-        }
+    .overdrive-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 4px;
+      color: #c8d8ff;
+      text-transform: uppercase;
+    }
 
-        .hidden { display: none !important; }
+    .overdrive-bar-bg {
+      height: 9px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
 
-        h1.game-title {
-            font-size: 40px;
-            font-weight: 900;
-            letter-spacing: -1px;
-            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
+    .overdrive-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00f5ff, #ff2bd6, #ffd84d);
+      border-radius: 999px;
+      transition: width 0.12s linear;
+      box-shadow: 0 0 12px rgba(0, 245, 255, 0.8);
+    }
 
-        p.subtitle {
-            color: #94a3b8;
-            font-size: 15px;
-            margin-bottom: 32px;
-        }
+    .overdrive-active .overdrive-label {
+      color: #ffd84d;
+      animation: pulseText 0.45s infinite alternate;
+    }
 
-        .btn {
-            background: linear-gradient(135deg, #0284c7, #2563eb);
-            color: white;
-            border: none;
-            padding: 16px 48px;
-            font-size: 18px;
-            font-weight: 800;
-            border-radius: 30px;
-            cursor: pointer;
-            pointer-events: auto;
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    @keyframes pulseText {
+      from { transform: scale(1); text-shadow: 0 0 6px #ffd84d; }
+      to { transform: scale(1.08); text-shadow: 0 0 18px #ff4d00; }
+    }
 
-        .btn:active {
-            transform: scale(0.96);
-            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
-        }
+    /* Combo & Floating Popups */
+    #combo-badge {
+      position: fixed;
+      top: 112px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #ffd84d;
+      text-shadow: 0 0 14px rgba(255, 216, 77, 0.85);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.15s;
+      pointer-events: none;
+      z-index: 12;
+    }
 
-        .controls-hint {
-            margin-top: 36px;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            max-width: 320px;
-            width: 100%;
-        }
+    #popup-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 15;
+      overflow: hidden;
+    }
 
-        .hint-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 10px;
-            font-size: 12px;
-            color: #cbd5e1;
-        }
+    .float-msg {
+      position: absolute;
+      left: 50%;
+      top: 38%;
+      transform: translate(-50%, -50%);
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
+      animation: floatUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
 
-        .hint-card span {
-            display: block;
-            font-weight: 800;
-            color: #38bdf8;
-            margin-bottom: 2px;
-        }
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translate(-50%, -20%) scale(0.7); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+      100% { opacity: 0; transform: translate(-50%, -140%) scale(0.95); }
+    }
 
-        .game-over-card {
-            background: rgba(30, 41, 59, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 24px;
-            width: 100%;
-            max-width: 320px;
-            margin-bottom: 24px;
-        }
+    .hud-bottom-hint {
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 0.8px;
+      font-weight: 600;
+    }
 
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
+    /* Overlay Screens */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: radial-gradient(circle at center, rgba(10, 18, 42, 0.62), rgba(3, 4, 12, 0.88));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 20;
+    }
 
-        .summary-row:last-child { border-bottom: none; }
-        .summary-label { color: #94a3b8; font-size: 14px; }
-        .summary-val { font-weight: 800; font-size: 16px; color: #f8fafc; }
+    .hidden {
+      display: none !important;
+    }
 
-        /* On-screen Double-Tap Hint for Hoverboard */
-        #mobile-hoverboard-btn {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 15;
-            pointer-events: auto;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(245, 158, 11, 0.5);
-            color: #fbbf24;
-            padding: 12px 18px;
-            border-radius: 25px;
-            font-size: 12px;
-            font-weight: 800;
-            backdrop-filter: blur(6px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-    </style>
-    <!-- Three.js Library CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <meta name="monetag" content="16b5f75df72e2c5ce529424c7ce9be2e">
+    .panel {
+      width: 100%;
+      max-width: 390px;
+      background: rgba(12, 16, 36, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 24px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(0, 245, 255, 0.12);
+    }
+
+    .proto-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 245, 255, 0.16);
+      color: #00f5ff;
+      border: 1px solid rgba(0, 245, 255, 0.35);
+      margin-bottom: 10px;
+    }
+
+    h1.title {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #ffffff 10%, #00f5ff 55%, #ff2bd6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #9cb0d9;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .stat-box .lbl {
+      font-size: 10px;
+      color: #8ea4d2;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-weight: 700;
+    }
+
+    .stat-box .num {
+      font-size: 22px;
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.15s;
+      margin-bottom: 10px;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00f5ff, #0088ff);
+      color: #03101d;
+      box-shadow: 0 8px 24px rgba(0, 245, 255, 0.35);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.09);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #ffd84d, #ff8800);
+      color: #1f0e00;
+    }
+
+    .btn-yt {
+      background: linear-gradient(135deg, #ff1e3c, #c40022);
+      color: #ffffff;
+      font-size: 13px;
+      padding: 12px 14px;
+      box-shadow: 0 6px 20px rgba(255, 30, 60, 0.3);
+    }
+
+    .controls-box {
+      margin-top: 6px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+      color: #9cb0d9;
+      line-height: 1.5;
+    }
+
+    .controls-box b {
+      color: #ffffff;
+    }
+
+    /* Shop / Hangar */
+    .skin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 14px 0 18px;
+      text-align: left;
+    }
+
+    .skin-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .skin-card.equipped {
+      border-color: #00f5ff;
+      background: rgba(0, 245, 255, 0.1);
+    }
+
+    .skin-name {
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .skin-desc {
+      font-size: 11px;
+      color: #9cb0d9;
+      margin-top: 2px;
+    }
+
+    .skin-btn {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .skin-btn.equip { background: #00f5ff; color: #02121f; }
+    .skin-btn.active { background: rgba(0, 245, 255, 0.2); color: #00f5ff; border: 1px solid #00f5ff; }
+    .skin-btn.buy { background: #ffd84d; color: #1b0d00; }
+    .skin-btn.locked { background: rgba(255,255,255,0.1); color: #8b9bb8; }
+
+    .new-record {
+      display: inline-block;
+      background: #ffd84d;
+      color: #1f0e00;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+
+    #flash-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: #ffffff;
+      opacity: 0;
+      z-index: 18;
+      transition: opacity 0.08s;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="canvas-container"></div>
+  <canvas id="game-canvas"></canvas>
+  <div id="flash-overlay"></div>
+  <div id="popup-layer"></div>
+  <div id="combo-badge">COMBO x2</div>
 
-    <!-- HUD Display -->
-    <div id="hud">
-        <div class="top-bar">
-            <div class="stat-box">
-                <span class="stat-label">Score</span>
-                <span class="stat-value score-val" id="hud-score">0</span>
-                <span class="multiplier-badge" id="hud-multiplier">1x</span>
-            </div>
-            <div class="stat-box" style="align-items: flex-end;">
-                <span class="stat-label">Coins</span>
-                <span class="stat-value coin-val" id="hud-coins">0</span>
-                <span style="font-size: 11px; color: #64748b; margin-top: 4px;">HIGH: <span id="hud-highscore">0</span></span>
-            </div>
+  <!-- HUD -->
+  <div id="hud">
+    <div>
+      <div class="hud-top">
+        <div class="hud-card">
+          <div class="score-label">Score</div>
+          <div class="score-val" id="hud-score">0</div>
+          <div class="zone-pill" id="hud-zone">ZONE 1 • CYBER</div>
         </div>
-
-        <div class="board-status" id="board-status">
-            <span style="font-size: 12px; font-weight: 800; color: #38bdf8;">HOVERBOARD</span>
-            <div class="board-timer"><div class="board-progress" id="board-progress"></div></div>
+        <div class="hud-right">
+          <div class="hud-card shard-pill">
+            <div class="shard-dot"></div>
+            <span id="hud-shards">0</span>
+          </div>
+          <button class="icon-btn" id="btn-mute" aria-label="Toggle Sound">🔊</button>
         </div>
+      </div>
 
-        <button id="mobile-hoverboard-btn">🛹 TAP HOVERBOARD</button>
+      <div class="overdrive-wrap" id="overdrive-wrap">
+        <div class="overdrive-label" id="overdrive-label">Overdrive 0%</div>
+        <div class="overdrive-bar-bg">
+          <div class="overdrive-bar-fill" id="overdrive-fill"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- Start Screen Overlay -->
-    <div id="start-screen" class="overlay-screen">
-        <h1 class="game-title">SUBWAY RUNNER</h1>
-        <p class="subtitle">3D Endless Dash</p>
-        <button class="btn" id="start-btn">TAP TO PLAY</button>
+    <div class="hud-bottom-hint">DRAG LEFT / RIGHT TO ROLL 360° • TAP OR SWIPE UP TO JUMP</div>
+  </div>
 
-        <div class="controls-hint">
-            <div class="hint-card"><span>SWIPE LEFT/RIGHT</span> Change Lane</div>
-            <div class="hint-card"><span>SWIPE UP</span> Jump</div>
-            <div class="hint-card"><span>SWIPE DOWN</span> Slide</div>
-            <div class="hint-card"><span>DOUBLE TAP / BTN</span> Hoverboard</div>
+  <!-- START MENU -->
+  <div class="overlay" id="menu-screen">
+    <div class="panel">
+      <div class="proto-tag">360° NEON ARCADE</div>
+      <h1 class="title">ORBIX</h1>
+      <p class="subtitle">Roll around the 360° neon tube, graze walls for combos, and trigger Overdrive to SMASH everything!</p>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="lbl">Best Score</div>
+          <div class="num" id="menu-best">0</div>
         </div>
-    </div>
-
-    <!-- Game Over Screen Overlay -->
-    <div id="gameover-screen" class="overlay-screen hidden">
-        <h1 class="game-title" style="background: linear-gradient(135deg, #ef4444, #f97316); -webkit-background-clip: text;">GAME OVER</h1>
-        
-        <div class="game-over-card">
-            <div class="summary-row">
-                <span class="summary-label">Score</span>
-                <span class="summary-val" id="go-score">0</span>
-            </div>
-            <div class="summary-row">
-                <span class="summary-label">Coins Picked</span>
-                <span class="summary-val" id="go-coins">0</span>
-            </div>
-            <div class="summary-row">
-                <span class="summary-label">High Score</span>
-                <span class="summary-val" style="color:#38bdf8;" id="go-highscore">0</span>
-            </div>
+        <div class="stat-box">
+          <div class="lbl">Total Shards</div>
+          <div class="num" style="color:#ffd84d" id="menu-shards">0</div>
         </div>
+      </div>
 
-        <button class="btn" id="restart-btn">RUN AGAIN</button>
+      <button class="btn btn-primary" id="btn-play">TAP TO ROLL</button>
+      <button class="btn btn-secondary" id="btn-hangar">ORB SKINS & TRAILS</button>
+      <a class="btn btn-yt" href="https://www.youtube.com/@SHONENSTREAMHAKAI" target="_blank" rel="noopener noreferrer">▶ YOUTUBE: @SHONENSTREAMHAKAI</a>
+
+      <div class="controls-box">
+        📱 <b>Phone:</b> Slide thumb left/right to roll 360° • Tap or swipe up to jump<br/>
+        💻 <b>PC:</b> A/D or Left/Right Arrows • Space/Up to jump
+      </div>
     </div>
+  </div>
 
-    <script>
-        /* =========================================================================
-           GLOBAL GAME STATE & CONSTANTS
-           ========================================================================= */
-        const LANES = [-2.2, 0, 2.2]; // Fixed X offsets for 3 tracks
-        const LANE_SPEED = 18; // Speed of horizontal transitions
-        const INITIAL_SPEED = 22;
-        const MAX_SPEED = 42;
-        const SPEED_INCREMENT = 0.003;
-        const JUMP_FORCE = 12;
-        const GRAVITY = 32;
-        const SLIDE_DURATION = 0.8; // Seconds
-        const HOVERBOARD_DURATION = 8.0; // Seconds
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="gameover-screen">
+    <div class="panel">
+      <div class="new-record hidden" id="new-record-badge">★ NEW PERSONAL BEST ★</div>
+      <h1 class="title" style="font-size:30px;">SHATTERED!</h1>
+      <p class="subtitle" id="gameover-sub">Graze close past walls to build Combos & Overdrive!</p>
 
-        let state = {
-            active: false,
-            score: 0,
-            coins: 0,
-            multiplier: 1,
-            highScore: parseInt(localStorage.getItem('sr3d_highscore') || '0', 10),
-            speed: INITIAL_SPEED,
-            currentLane: 1, // 0: Left, 1: Center, 2: Right
-            targetX: 0,
-            posY: 0,
-            velocityY: 0,
-            isJumping: false,
-            isSliding: false,
-            slideTimer: 0,
-            hasHoverboard: false,
-            hoverboardTimer: 0,
-            distance: 0
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="lbl">Run Score</div>
+          <div class="num" id="go-score">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">Best Score</div>
+          <div class="num" style="color:#00f5ff" id="go-best">0</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-retry">ROLL AGAIN</button>
+      <button class="btn btn-gold" id="btn-share">CHALLENGE FRIENDS</button>
+      <button class="btn btn-secondary" id="btn-go-hangar">ORB SKINS</button>
+      <a class="btn btn-yt" href="https://www.youtube.com/@SHONENSTREAMHAKAI" target="_blank" rel="noopener noreferrer">▶ SUBSCRIBE: @SHONENSTREAMHAKAI</a>
+    </div>
+  </div>
+
+  <!-- HANGAR / SHOP -->
+  <div class="overlay hidden" id="hangar-screen">
+    <div class="panel">
+      <h1 class="title" style="font-size:28px;">ORB HANGAR</h1>
+      <p class="subtitle">Your Shards: <b style="color:#ffd84d" id="hangar-shards">0</b></p>
+
+      <div class="skin-list" id="skin-list"></div>
+
+      <button class="btn btn-primary" id="btn-hangar-back">BACK</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------------- SAFE STORAGE ----------------
+  const memStore = {};
+  function saveVal(k, v) {
+    memStore[k] = String(v);
+    try { localStorage.setItem(k, String(v)); } catch (e) {}
+  }
+  function loadVal(k, fallback) {
+    try {
+      const v = localStorage.getItem(k);
+      if (v !== null) return v;
+    } catch (e) {}
+    return memStore[k] !== undefined ? memStore[k] : fallback;
+  }
+
+  let bestScore = parseInt(loadVal("orbix_best", "0"), 10) || 0;
+  let totalShards = parseInt(loadVal("orbix_shards", "0"), 10) || 0;
+  let ownedSkins = JSON.parse(loadVal("orbix_skins", '["cyber"]'));
+  let equippedSkin = loadVal("orbix_skin", "cyber");
+  let isMuted = loadVal("orbix_muted", "0") === "1";
+
+  const SKINS = [
+    { id: "cyber", name: "Cyber Sphere", desc: "Neon cyan core with dark gyro cage", cost: 0, color: 0x00f5ff },
+    { id: "plasma", name: "Plasma Core", desc: "Hot pink orb with spinning halo rings", cost: 25, color: 0xff2bd6 },
+    { id: "crown", name: "Solar Crown", desc: "Blazing golden star-orb & gold trail", cost: 60, color: 0xffd84d }
+  ];
+
+  // ---------------- SOUND & SYNTHWAVE MUSIC ENGINE ----------------
+  let audioCtx = null;
+  let masterBus = null;
+  let musicBus = null;
+  let noiseBuffer = null;
+
+  function ensureAudio() {
+    if (isMuted) return null;
+    try {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        audioCtx = new AC();
+
+        const comp = audioCtx.createDynamicsCompressor();
+        comp.threshold.value = -14;
+        comp.ratio.value = 6;
+        comp.connect(audioCtx.destination);
+        masterBus = comp;
+
+        musicBus = audioCtx.createGain();
+        musicBus.gain.value = 0.34;
+        musicBus.connect(masterBus);
+
+        // Pre-build noise buffer for crisp snare & hats
+        const len = Math.floor(audioCtx.sampleRate * 0.25);
+        noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) {}
+    return audioCtx;
+  }
+
+  function playTone(freq, endFreq, dur, type = "sine", vol = 0.14) {
+    const ctx = ensureAudio();
+    if (!ctx || !masterBus) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), ctx.currentTime + dur);
+      gain.gain.setValueAtTime(vol, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(masterBus);
+      osc.start();
+      osc.stop(ctx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  const sfx = {
+    shard: (combo) => playTone(540 + combo * 65, 920 + combo * 90, 0.13, "triangle", 0.15),
+    graze: (combo) => playTone(320 + combo * 55, 680 + combo * 70, 0.16, "sawtooth", 0.09),
+    jump: () => playTone(260, 560, 0.14, "sine", 0.12),
+    overdrive: () => {
+      playTone(220, 880, 0.35, "sawtooth", 0.14);
+      setTimeout(() => playTone(440, 1100, 0.3, "triangle", 0.14), 80);
+    },
+    smash: () => playTone(150, 38, 0.25, "square", 0.18),
+    crash: () => {
+      playTone(220, 45, 0.45, "sawtooth", 0.2);
+      playTone(140, 30, 0.5, "triangle", 0.2);
+    }
+  };
+
+  // Synthwave Sequencer (4-bar cyberpunk loop: Am -> F -> C -> G)
+  const BASS_ROOTS = [110.0, 87.31, 130.81, 98.0];
+  const ARP_CHORDS = [
+    [440.0, 523.25, 659.25, 880.0],
+    [349.23, 440.0, 523.25, 698.46],
+    [261.63, 329.63, 392.0, 523.25],
+    [392.0, 493.88, 587.33, 783.99]
+  ];
+  let musicStep = 0;
+  let nextNoteTime = 0;
+
+  function triggerKick(ctx, time) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(135, time);
+    osc.frequency.exponentialRampToValueAtTime(42, time + 0.11);
+    gain.gain.setValueAtTime(0.65, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
+    osc.connect(gain);
+    gain.connect(musicBus);
+    osc.start(time);
+    osc.stop(time + 0.17);
+  }
+
+  function triggerSnare(ctx, time) {
+    if (!noiseBuffer) return;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 1100;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.28, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.13);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicBus);
+    src.start(time);
+    src.stop(time + 0.14);
+  }
+
+  function triggerHat(ctx, time) {
+    if (!noiseBuffer) return;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 6500;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.11, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.045);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicBus);
+    src.start(time);
+    src.stop(time + 0.05);
+  }
+
+  function triggerBass(ctx, time, freq, stepDur) {
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(freq, time);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(950, time);
+    filter.frequency.exponentialRampToValueAtTime(260, time + stepDur * 0.85);
+    gain.gain.setValueAtTime(0.26, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + stepDur * 0.9);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicBus);
+    osc.start(time);
+    osc.stop(time + stepDur);
+  }
+
+  function triggerArp(ctx, time, freq, stepDur, bright) {
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    osc.type = bright ? "sawtooth" : "triangle";
+    osc.frequency.setValueAtTime(freq, time);
+    filter.type = "lowpass";
+    filter.frequency.value = bright ? 3200 : 1800;
+    gain.gain.setValueAtTime(bright ? 0.14 : 0.1, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + stepDur * 0.85);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicBus);
+    osc.start(time);
+    osc.stop(time + stepDur);
+  }
+
+  function scheduleMusic() {
+    if (state !== "playing" || isMuted || document.hidden || !audioCtx || !musicBus) return;
+    if (audioCtx.state === "suspended") return;
+
+    const bpm = overdriveTimer > 0 ? 142 : 126 + currentZoneIdx * 5;
+    const stepDur = 60 / bpm / 4; // 16th note
+
+    if (nextNoteTime < audioCtx.currentTime) {
+      nextNoteTime = audioCtx.currentTime + 0.03;
+    }
+
+    while (nextNoteTime < audioCtx.currentTime + 0.12) {
+      const bar = Math.floor(musicStep / 16) % 4;
+      const stepInBar = musicStep % 16;
+      const root = BASS_ROOTS[bar];
+      const chord = ARP_CHORDS[bar];
+
+      // 4-on-the-floor kick
+      if (stepInBar % 4 === 0) triggerKick(audioCtx, nextNoteTime);
+      // Snare on 2 and 4
+      if (stepInBar === 4 || stepInBar === 12) triggerSnare(audioCtx, nextNoteTime);
+      // Offbeat hi-hat
+      if (stepInBar % 2 === 1) triggerHat(audioCtx, nextNoteTime);
+      // Pumping octave synthwave bass
+      const bassFreq = stepInBar % 2 === 0 ? root : root * 2;
+      triggerBass(audioCtx, nextNoteTime, bassFreq, stepDur);
+
+      // Lead arpeggio (plays on even 16ths, or every 16th in Overdrive / Zone 2+)
+      if (overdriveTimer > 0 || currentZoneIdx > 0 || stepInBar % 2 === 0) {
+        const arpNote = chord[stepInBar % 4] * (overdriveTimer > 0 && stepInBar % 8 >= 4 ? 2 : 1);
+        triggerArp(audioCtx, nextNoteTime, arpNote, stepDur, overdriveTimer > 0);
+      }
+
+      nextNoteTime += stepDur;
+      musicStep = (musicStep + 1) % 64;
+    }
+  }
+
+  setInterval(scheduleMusic, 30);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!audioCtx) return;
+    try {
+      if (document.hidden) audioCtx.suspend();
+      else if (!isMuted) audioCtx.resume();
+    } catch (e) {}
+  });
+
+  // ---------------- THREE.JS SETUP ----------------
+  const canvas = document.getElementById("game-canvas");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x040510);
+  scene.fog = new THREE.FogExp2(0x040510, 0.017);
+
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 140);
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(10, 20, 15);
+  scene.add(dirLight);
+
+  const playerLight = new THREE.PointLight(0x00f5ff, 2.4, 16);
+  scene.add(playerLight);
+
+  // ---------------- ZONES ----------------
+  const ZONES = [
+    { name: "ZONE 1 • CYBER", minScore: 0, bg: 0x040510, neon: 0x00f5ff, obs: 0xff2b5e },
+    { name: "ZONE 2 • INFERNO", minScore: 450, bg: 0x160405, neon: 0xff6a00, obs: 0xffd84d },
+    { name: "ZONE 3 • MATRIX", minScore: 1000, bg: 0x031208, neon: 0x00ff88, obs: 0xff2bd6 },
+    { name: "ZONE 4 • HYPERGOLD", minScore: 1700, bg: 0x10041c, neon: 0xffd84d, obs: 0x00f5ff }
+  ];
+  let currentZoneIdx = 0;
+
+  // ---------------- CYLINDER TRACK ----------------
+  const TRACK_RADIUS = 4.2;
+  const BALL_RADIUS = 0.44;
+  const RING_COUNT = 24;
+  const RING_SPACING = 4.5;
+  const rings = [];
+
+  const trackMat = new THREE.MeshStandardMaterial({
+    color: 0x0b1024,
+    roughness: 0.65,
+    metalness: 0.35
+  });
+  const trackCoreGeo = new THREE.CylinderGeometry(TRACK_RADIUS, TRACK_RADIUS, RING_COUNT * RING_SPACING + 20, 32, 1, true);
+  trackCoreGeo.rotateX(Math.PI / 2);
+  const trackCore = new THREE.Mesh(trackCoreGeo, trackMat);
+  trackCore.position.z = -45;
+  scene.add(trackCore);
+
+  const ringGeo = new THREE.TorusGeometry(TRACK_RADIUS + 0.03, 0.045, 6, 32);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.45 });
+  for (let i = 0; i < RING_COUNT; i++) {
+    const r = new THREE.Mesh(ringGeo, ringMat);
+    r.position.z = 8 - i * RING_SPACING;
+    scene.add(r);
+    rings.push(r);
+  }
+
+  const railGeo = new THREE.BoxGeometry(0.05, 0.05, RING_COUNT * RING_SPACING + 20);
+  const railMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.25 });
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const rail = new THREE.Mesh(railGeo, railMat);
+    rail.position.set(TRACK_RADIUS * Math.sin(a), TRACK_RADIUS * Math.cos(a), -45);
+    scene.add(rail);
+  }
+
+  const starCount = 160;
+  const starPos = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const rad = 11 + Math.random() * 24;
+    starPos[i * 3] = Math.cos(a) * rad;
+    starPos[i * 3 + 1] = Math.sin(a) * rad;
+    starPos[i * 3 + 2] = -Math.random() * 110;
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.22, transparent: true, opacity: 0.75 });
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
+
+  // ---------------- ROLLING BALL PLAYER ----------------
+  const playerGroup = new THREE.Group();
+  scene.add(playerGroup);
+
+  const squashGroup = new THREE.Group();
+  playerGroup.add(squashGroup);
+
+  const ballGroup = new THREE.Group();
+  squashGroup.add(ballGroup);
+
+  const shieldGeo = new THREE.IcosahedronGeometry(0.75, 1);
+  const shieldMat = new THREE.MeshBasicMaterial({
+    color: 0xffd84d,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.65
+  });
+  const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+  shieldMesh.visible = false;
+  playerGroup.add(shieldMesh);
+
+  let activeSkinColor = 0x00f5ff;
+  let gyroRing1 = null, gyroRing2 = null;
+
+  function buildPlayerBall() {
+    while (ballGroup.children.length) {
+      ballGroup.remove(ballGroup.children[0]);
+    }
+    gyroRing1 = null;
+    gyroRing2 = null;
+
+    const skin = SKINS.find(s => s.id === equippedSkin) || SKINS[0];
+    activeSkinColor = skin.color;
+
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: skin.color,
+      emissive: skin.color,
+      emissiveIntensity: 0.65,
+      roughness: 0.2,
+      metalness: 0.3
+    });
+
+    const cageMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.55
+    });
+
+    const bandMat = new THREE.MeshStandardMaterial({
+      color: 0x0e1428,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+
+    const core = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS * 0.78, 18, 18), coreMat);
+    ballGroup.add(core);
+
+    if (skin.id === "cyber") {
+      const cage = new THREE.Mesh(new THREE.IcosahedronGeometry(BALL_RADIUS, 1), cageMat);
+      ballGroup.add(cage);
+
+      const band1 = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 0.94, 0.045, 6, 24), bandMat);
+      const band2 = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 0.94, 0.045, 6, 24), bandMat);
+      band2.rotation.y = Math.PI / 2;
+      const band3 = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 0.94, 0.045, 6, 24), coreMat);
+      band3.rotation.x = Math.PI / 2;
+      ballGroup.add(band1, band2, band3);
+    } else if (skin.id === "plasma") {
+      const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(BALL_RADIUS * 0.92, 1), cageMat);
+      ballGroup.add(shell);
+
+      const rMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff });
+      gyroRing1 = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 1.25, 0.04, 6, 24), rMat);
+      gyroRing2 = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 1.15, 0.04, 6, 24), coreMat);
+      gyroRing2.rotation.x = Math.PI / 2;
+      ballGroup.add(gyroRing1, gyroRing2);
+    } else {
+      const starShell = new THREE.Mesh(new THREE.IcosahedronGeometry(BALL_RADIUS * 1.04, 0), cageMat);
+      ballGroup.add(starShell);
+
+      const goldBand = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 1.0, 0.055, 6, 24), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      const goldBand2 = goldBand.clone();
+      goldBand2.rotation.y = Math.PI / 2;
+      ballGroup.add(goldBand, goldBand2);
+    }
+
+    playerLight.color.setHex(skin.color);
+  }
+  buildPlayerBall();
+
+  // ---------------- GLOWING MOTION TRAIL POOL ----------------
+  const TRAIL_POOL_SIZE = 32;
+  const trailPool = [];
+  const trailGeo = new THREE.SphereGeometry(BALL_RADIUS * 0.72, 10, 10);
+
+  for (let i = 0; i < TRAIL_POOL_SIZE; i++) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x00f5ff,
+      transparent: true,
+      opacity: 0
+    });
+    const mesh = new THREE.Mesh(trailGeo, mat);
+    mesh.visible = false;
+    scene.add(mesh);
+    trailPool.push({ mesh, mat, life: 0, maxLife: 0.42 });
+  }
+  let trailCursor = 0;
+  let trailEmitAccum = 0;
+
+  function emitTrailNode(pos, colorHex) {
+    const node = trailPool[trailCursor];
+    trailCursor = (trailCursor + 1) % TRAIL_POOL_SIZE;
+    node.mesh.position.copy(pos);
+    node.mesh.scale.setScalar(1.0);
+    node.mesh.visible = true;
+    node.mat.color.setHex(colorHex);
+    node.mat.opacity = 0.65;
+    node.life = node.maxLife;
+  }
+
+  function clearTrail() {
+    for (const t of trailPool) {
+      t.life = 0;
+      t.mesh.visible = false;
+    }
+  }
+
+  // ---------------- POOLED PARTICLES & OBJECTS ----------------
+  const obstacles = [];
+  const shards = [];
+  const particles = [];
+
+  const obsMat = new THREE.MeshStandardMaterial({
+    color: 0xff2b5e,
+    emissive: 0xff1144,
+    emissiveIntensity: 0.6,
+    roughness: 0.25
+  });
+  const hurdleMat = new THREE.MeshStandardMaterial({
+    color: 0xff9900,
+    emissive: 0xff5500,
+    emissiveIntensity: 0.65,
+    roughness: 0.25
+  });
+  const shardGeo = new THREE.OctahedronGeometry(0.32, 0);
+  const shardMat = new THREE.MeshStandardMaterial({
+    color: 0xffd84d,
+    emissive: 0xffaa00,
+    emissiveIntensity: 0.75,
+    roughness: 0.15
+  });
+  const particleGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+
+  function spawnExplosion(pos, color, count = 16) {
+    const mat = new THREE.MeshBasicMaterial({ color });
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(particleGeo, mat);
+      m.position.copy(pos);
+      scene.add(m);
+      particles.push({
+        mesh: m,
+        vx: (Math.random() - 0.5) * 14,
+        vy: (Math.random() - 0.5) * 14,
+        vz: (Math.random() - 0.5) * 12 + 4,
+        life: 0.55 + Math.random() * 0.35
+      });
+    }
+  }
+
+  // ---------------- GAME STATE ----------------
+  let state = "menu";
+  let returnToFromHangar = "menu";
+
+  let playerAngle = 0;
+  let targetAngle = 0;
+  let camAngle = 0;
+  let jumpY = 0;
+  let jumpVel = 0;
+  let wasAirborne = false;
+  let squashVal = 1.0;
+
+  let speed = 27;
+  let score = 0;
+  let runShards = 0;
+  let combo = 1;
+  let comboTimer = 0;
+  let overdrive = 0;
+  let overdriveTimer = 0;
+  let shakeTime = 0;
+  let shakeIntensity = 0;
+  let spawnTimer = 0;
+  let patternAngle = 0;
+
+  // UI Elements
+  const hudEl = document.getElementById("hud");
+  const hudScore = document.getElementById("hud-score");
+  const hudZone = document.getElementById("hud-zone");
+  const hudShards = document.getElementById("hud-shards");
+  const overdriveWrap = document.getElementById("overdrive-wrap");
+  const overdriveLabel = document.getElementById("overdrive-label");
+  const overdriveFill = document.getElementById("overdrive-fill");
+  const comboBadge = document.getElementById("combo-badge");
+  const popupLayer = document.getElementById("popup-layer");
+  const flashOverlay = document.getElementById("flash-overlay");
+
+  const menuScreen = document.getElementById("menu-screen");
+  const gameoverScreen = document.getElementById("gameover-screen");
+  const hangarScreen = document.getElementById("hangar-screen");
+
+  function updateMenuStats() {
+    document.getElementById("menu-best").textContent = bestScore;
+    document.getElementById("menu-shards").textContent = totalShards;
+    document.getElementById("btn-mute").textContent = isMuted ? "🔇" : "🔊";
+  }
+  updateMenuStats();
+
+  function showPopup(text, color = "#ffffff") {
+    const el = document.createElement("div");
+    el.className = "float-msg";
+    el.textContent = text;
+    el.style.color = color;
+    popupLayer.appendChild(el);
+    setTimeout(() => el.remove(), 920);
+  }
+
+  function flashScreen(color = "#ffffff", opacity = 0.35) {
+    flashOverlay.style.background = color;
+    flashOverlay.style.opacity = String(opacity);
+    setTimeout(() => { flashOverlay.style.opacity = "0"; }, 90);
+  }
+
+  function triggerShake(dur = 0.25, intensity = 0.35) {
+    shakeTime = Math.max(shakeTime, dur);
+    shakeIntensity = Math.max(shakeIntensity, intensity);
+  }
+
+  function clearRunObjects() {
+    for (const o of obstacles) scene.remove(o.mesh);
+    obstacles.length = 0;
+    for (const s of shards) scene.remove(s.mesh);
+    shards.length = 0;
+    clearTrail();
+  }
+
+  function startGame() {
+    ensureAudio();
+    clearRunObjects();
+    playerAngle = 0;
+    targetAngle = 0;
+    camAngle = 0;
+    jumpY = 0;
+    jumpVel = 0;
+    wasAirborne = false;
+    squashVal = 1.0;
+    speed = 27;
+    score = 0;
+    runShards = 0;
+    combo = 1;
+    comboTimer = 0;
+    overdrive = 0;
+    overdriveTimer = 0;
+    shakeTime = 0;
+    spawnTimer = 0.4;
+    currentZoneIdx = 0;
+    musicStep = 0;
+    if (audioCtx) nextNoteTime = audioCtx.currentTime + 0.04;
+    applyZoneTheme(0);
+
+    hudScore.textContent = "0";
+    hudShards.textContent = totalShards;
+    hudZone.textContent = ZONES[0].name;
+    overdriveWrap.classList.remove("overdrive-active");
+    shieldMesh.visible = false;
+    updateOverdriveUI();
+
+    menuScreen.classList.add("hidden");
+    gameoverScreen.classList.add("hidden");
+    hangarScreen.classList.add("hidden");
+    hudEl.style.display = "flex";
+    state = "playing";
+  }
+
+  function applyZoneTheme(idx) {
+    const z = ZONES[idx];
+    scene.background.setHex(z.bg);
+    scene.fog.color.setHex(z.bg);
+    ringMat.color.setHex(z.neon);
+    railMat.color.setHex(z.neon);
+    obsMat.color.setHex(z.obs);
+    obsMat.emissive.setHex(z.obs);
+    hudZone.textContent = z.name;
+    hudZone.style.color = "#" + z.neon.toString(16).padStart(6, "0");
+    hudZone.style.borderColor = hudZone.style.color;
+  }
+
+  function updateOverdriveUI() {
+    if (overdriveTimer > 0) {
+      const pct = Math.max(0, Math.min(100, (overdriveTimer / 6.0) * 100));
+      overdriveFill.style.width = pct + "%";
+      overdriveLabel.textContent = "⚡ OVERDRIVE SMASH ACTIVE! ⚡";
+      overdriveWrap.classList.add("overdrive-active");
+    } else {
+      overdriveFill.style.width = Math.min(100, overdrive) + "%";
+      overdriveLabel.textContent = `Overdrive ${Math.floor(overdrive)}%`;
+      overdriveWrap.classList.remove("overdrive-active");
+    }
+  }
+
+  function activateOverdrive() {
+    overdrive = 100;
+    overdriveTimer = 6.0;
+    shieldMesh.visible = true;
+    sfx.overdrive();
+    flashScreen("#ffd84d", 0.3);
+    triggerShake(0.25, 0.25);
+    showPopup("OVERDRIVE SMASH!", "#ffd84d");
+    if (navigator.vibrate) navigator.vibrate([30, 30, 50]);
+  }
+
+  function endGame() {
+    state = "gameover";
+    sfx.crash();
+    flashScreen("#ff2b5e", 0.45);
+    triggerShake(0.45, 0.55);
+    if (navigator.vibrate) navigator.vibrate(140);
+
+    const finalScore = Math.floor(score);
+    let isRecord = false;
+    if (finalScore > bestScore) {
+      bestScore = finalScore;
+      saveVal("orbix_best", bestScore);
+      isRecord = true;
+    }
+    saveVal("orbix_shards", totalShards);
+    updateMenuStats();
+
+    document.getElementById("go-score").textContent = finalScore;
+    document.getElementById("go-best").textContent = bestScore;
+    document.getElementById("new-record-badge").classList.toggle("hidden", !isRecord);
+    document.getElementById("gameover-sub").textContent =
+      runShards > 0
+        ? `Collected +${runShards} Shards! Graze close to walls for faster Overdrive.`
+        : `Tip: Roll close past walls for CLOSE CALL combos & Overdrive!`;
+
+    hudEl.style.display = "none";
+    comboBadge.style.opacity = "0";
+    gameoverScreen.classList.remove("hidden");
+  }
+
+  // ---------------- SPAWNING PATTERNS ----------------
+  function placeOnCylinder(mesh, angle, rOffset, zPos) {
+    const r = TRACK_RADIUS + rOffset;
+    mesh.position.set(r * Math.sin(angle), r * Math.cos(angle), zPos);
+    mesh.rotation.z = -angle;
+  }
+
+  function spawnWave() {
+    const zSpawn = -98;
+    const roll = Math.random();
+    patternAngle += (Math.random() - 0.5) * 2.2;
+
+    if (roll < 0.36) {
+      const gapAngle = patternAngle;
+      spawnObstacle("pillar", gapAngle + 0.72, zSpawn, 0.85, 1.7, 1.1, 0);
+      spawnObstacle("pillar", gapAngle - 0.72, zSpawn, 0.85, 1.7, 1.1, 0);
+      spawnShardLine(gapAngle, zSpawn + 2, 3);
+    } else if (roll < 0.64) {
+      const a = patternAngle;
+      spawnObstacle("hurdle", a, zSpawn, 2.2, 0.62, 0.7, 0);
+      spawnShard(a, 1.35, zSpawn);
+    } else if (roll < 0.86) {
+      const spinSpeed = (Math.random() < 0.5 ? 1 : -1) * (0.8 + Math.min(1.1, speed * 0.015));
+      spawnObstacle("pillar", patternAngle, zSpawn, 1.0, 1.85, 1.0, spinSpeed);
+      spawnShardLine(patternAngle + 1.1, zSpawn, 3);
+    } else {
+      for (let i = 0; i < 3; i++) {
+        spawnObstacle("pillar", patternAngle + i * ((Math.PI * 2) / 3), zSpawn, 1.05, 1.9, 1.0, 0);
+      }
+      spawnShard(patternAngle + Math.PI / 3, 0.45, zSpawn - 2);
+    }
+  }
+
+  function spawnObstacle(type, angle, z, w, h, d, spinSpeed) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = type === "hurdle" ? hurdleMat : obsMat;
+    const mesh = new THREE.Mesh(geo, mat);
+    const rOff = h * 0.5;
+    placeOnCylinder(mesh, angle, rOff, z);
+    scene.add(mesh);
+    obstacles.push({
+      mesh,
+      type,
+      angle,
+      w,
+      h,
+      d,
+      rOff,
+      spinSpeed,
+      angularHalf: Math.atan2(w * 0.5, TRACK_RADIUS) + 0.04,
+      grazed: false
+    });
+  }
+
+  function spawnShard(angle, heightOffset, z) {
+    const mesh = new THREE.Mesh(shardGeo, shardMat);
+    placeOnCylinder(mesh, angle, heightOffset, z);
+    scene.add(mesh);
+    shards.push({ mesh, angle, heightOffset });
+  }
+
+  function spawnShardLine(startAngle, startZ, count) {
+    for (let i = 0; i < count; i++) {
+      spawnShard(startAngle + i * 0.14, 0.5, startZ - i * 3.2);
+    }
+  }
+
+  // ---------------- CONTROLS ----------------
+  function triggerJump() {
+    if (state !== "playing") return;
+    if (jumpY <= 0.05) {
+      jumpVel = 11.4;
+      squashVal = 1.24;
+      sfx.jump();
+    }
+  }
+
+  let touchActive = false;
+  let startY = 0, lastX = 0, touchStartTime = 0;
+  let movedDist = 0, swipedUp = false;
+
+  canvas.addEventListener("touchstart", (e) => {
+    if (state !== "playing") return;
+    ensureAudio();
+    const t = e.touches[0];
+    touchActive = true;
+    lastX = t.clientX;
+    startY = t.clientY;
+    touchStartTime = performance.now();
+    movedDist = 0;
+    swipedUp = false;
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (!touchActive || state !== "playing") return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - lastX;
+    const dy = t.clientY - startY;
+    lastX = t.clientX;
+    movedDist += Math.abs(dx);
+
+    const sensitivity = (Math.PI * 2.35) / Math.max(300, window.innerWidth);
+    targetAngle += dx * sensitivity;
+
+    if (!swipedUp && dy < -38) {
+      swipedUp = true;
+      triggerJump();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", () => {
+    if (!touchActive) return;
+    touchActive = false;
+    const elapsed = performance.now() - touchStartTime;
+    if (elapsed < 220 && movedDist < 16 && !swipedUp) {
+      triggerJump();
+    }
+  });
+
+  let mouseDown = false;
+  canvas.addEventListener("mousedown", (e) => {
+    if (state !== "playing") return;
+    ensureAudio();
+    mouseDown = true;
+    lastX = e.clientX;
+    movedDist = 0;
+    touchStartTime = performance.now();
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!mouseDown || state !== "playing") return;
+    const dx = e.clientX - lastX;
+    lastX = e.clientX;
+    movedDist += Math.abs(dx);
+    targetAngle += dx * 0.0085;
+  });
+  window.addEventListener("mouseup", () => {
+    if (!mouseDown) return;
+    mouseDown = false;
+    if (performance.now() - touchStartTime < 200 && movedDist < 10) triggerJump();
+  });
+
+  const keys = {};
+  window.addEventListener("keydown", (e) => {
+    keys[e.code] = true;
+    if ((e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") && state === "playing") {
+      e.preventDefault();
+      triggerJump();
+    }
+  });
+  window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+
+  // ---------------- HANGAR UI ----------------
+  function renderHangar() {
+    document.getElementById("hangar-shards").textContent = totalShards;
+    const list = document.getElementById("skin-list");
+    list.innerHTML = "";
+    for (const s of SKINS) {
+      const owned = ownedSkins.includes(s.id);
+      const isEq = equippedSkin === s.id;
+      const card = document.createElement("div");
+      card.className = "skin-card" + (isEq ? " equipped" : "");
+      card.innerHTML = `
+        <div>
+          <div class="skin-name" style="color:#${s.color.toString(16).padStart(6,'0')}">${s.name}</div>
+          <div class="skin-desc">${s.desc}</div>
+        </div>
+      `;
+      const btn = document.createElement("button");
+      if (isEq) {
+        btn.className = "skin-btn active";
+        btn.textContent = "EQUIPPED";
+      } else if (owned) {
+        btn.className = "skin-btn equip";
+        btn.textContent = "EQUIP";
+        btn.onclick = () => {
+          equippedSkin = s.id;
+          saveVal("orbix_skin", equippedSkin);
+          buildPlayerBall();
+          renderHangar();
         };
+      } else if (totalShards >= s.cost) {
+        btn.className = "skin-btn buy";
+        btn.textContent = `BUY (${s.cost} ◆)`;
+        btn.onclick = () => {
+          totalShards -= s.cost;
+          ownedSkins.push(s.id);
+          equippedSkin = s.id;
+          saveVal("orbix_shards", totalShards);
+          saveVal("orbix_skins", JSON.stringify(ownedSkins));
+          saveVal("orbix_skin", equippedSkin);
+          buildPlayerBall();
+          updateMenuStats();
+          sfx.overdrive();
+          renderHangar();
+        };
+      } else {
+        btn.className = "skin-btn locked";
+        btn.textContent = `${s.cost} ◆`;
+      }
+      card.appendChild(btn);
+      list.appendChild(card);
+    }
+  }
 
-        /* Audio Engine using Web Audio API */
-        class SoundEngine {
-            constructor() {
-                this.ctx = null;
-            }
-            init() {
-                if (!this.ctx) {
-                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-            }
-            playCoin() {
-                if (!this.ctx) return;
-                let osc = this.ctx.createOscillator();
-                let gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
-                osc.frequency.exponentialRampToValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
-                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.08);
-            }
-            playJump() {
-                if (!this.ctx) return;
-                let osc = this.ctx.createOscillator();
-                let gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(500, this.ctx.currentTime + 0.12);
-                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.12);
-            }
-            playCrash() {
-                if (!this.ctx) return;
-                let osc = this.ctx.createOscillator();
-                let gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.3);
-                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.3);
-            }
-            playBoard() {
-                if (!this.ctx) return;
-                let osc = this.ctx.createOscillator();
-                let gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.15);
-            }
+  // ---------------- BUTTON HANDLERS ----------------
+  document.getElementById("btn-play").onclick = startGame;
+  document.getElementById("btn-retry").onclick = startGame;
+
+  document.getElementById("btn-hangar").onclick = () => {
+    returnToFromHangar = "menu";
+    menuScreen.classList.add("hidden");
+    renderHangar();
+    hangarScreen.classList.remove("hidden");
+  };
+  document.getElementById("btn-go-hangar").onclick = () => {
+    returnToFromHangar = "gameover";
+    gameoverScreen.classList.add("hidden");
+    renderHangar();
+    hangarScreen.classList.remove("hidden");
+  };
+  document.getElementById("btn-hangar-back").onclick = () => {
+    hangarScreen.classList.add("hidden");
+    if (returnToFromHangar === "menu") menuScreen.classList.remove("hidden");
+    else gameoverScreen.classList.remove("hidden");
+  };
+
+  document.getElementById("btn-mute").onclick = () => {
+    isMuted = !isMuted;
+    saveVal("orbix_muted", isMuted ? "1" : "0");
+    document.getElementById("btn-mute").textContent = isMuted ? "🔇" : "🔊";
+    if (!isMuted) {
+      ensureAudio();
+      if (audioCtx) nextNoteTime = audioCtx.currentTime + 0.04;
+    }
+  };
+
+  document.getElementById("btn-share").onclick = async () => {
+    const s = Math.floor(score);
+    const liveUrl = window.location.href.startsWith("http") ? window.location.href : "";
+    const msg = liveUrl
+      ? `I just rolled a score of ${s} in ORBIX! Can you beat me? Play here: ${liveUrl}`
+      : `I just rolled a score of ${s} in ORBIX! Can you beat me?`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "ORBIX Challenge", text: msg, url: liveUrl || undefined });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(msg);
+        showPopup("SCORE COPIED!", "#00f5ff");
+      }
+    } catch (e) {}
+  };
+
+  // ---------------- HELPERS ----------------
+  function angleDiff(a, b) {
+    return Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  }
+
+  // ---------------- MAIN LOOP ----------------
+  let lastTime = performance.now();
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    if (gyroRing1) {
+      gyroRing1.rotation.y += dt * 4.5;
+      gyroRing2.rotation.z += dt * 3.8;
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        scene.remove(p.mesh);
+        particles.splice(i, 1);
+      } else {
+        p.mesh.position.x += p.vx * dt;
+        p.mesh.position.y += p.vy * dt;
+        p.mesh.position.z += p.vz * dt;
+        p.mesh.rotation.x += dt * 8;
+        p.mesh.rotation.y += dt * 8;
+        p.mesh.scale.setScalar(Math.max(0.05, p.life * 1.4));
+      }
+    }
+
+    const trailFlowSpeed = state === "playing" ? (overdriveTimer > 0 ? speed * 1.32 : speed) : 14;
+    for (const t of trailPool) {
+      if (t.life > 0) {
+        t.life -= dt;
+        if (t.life <= 0) {
+          t.mesh.visible = false;
+        } else {
+          const ratio = t.life / t.maxLife;
+          t.mesh.position.z += trailFlowSpeed * dt;
+          t.mesh.scale.setScalar(0.15 + ratio * 0.85);
+          t.mat.opacity = ratio * 0.6;
         }
-        const audio = new SoundEngine();
+      }
+    }
 
-        /* =========================================================================
-           THREE.JS WORLD SETUP
-           ========================================================================= */
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
-        scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+    squashVal += (1.0 - squashVal) * Math.min(1, dt * 14);
+    const invSquash = 1 / Math.sqrt(Math.max(0.5, squashVal));
+    squashGroup.scale.set(invSquash, squashVal, invSquash);
 
-        // Camera initialized looking down track centerline
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
-        camera.position.set(0, 3.2, 5.5);
-        camera.lookAt(0, 1.2, -20);
+    if (state === "playing") {
+      if (keys["ArrowLeft"] || keys["KeyA"]) targetAngle -= 3.2 * dt;
+      if (keys["ArrowRight"] || keys["KeyD"]) targetAngle += 3.2 * dt;
 
-        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        container.appendChild(renderer.domElement);
+      const prevAngle = playerAngle;
+      playerAngle += (targetAngle - playerAngle) * Math.min(1, dt * 18);
+      const angularVel = (playerAngle - prevAngle) / Math.max(0.001, dt);
 
-        /* Lighting */
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(10, 20, 10);
-        scene.add(dirLight);
-
-        /* Reusable Shared Geometries & Materials */
-        const coinGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 12);
-        coinGeo.rotateX(Math.PI / 2);
-        const coinMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8, roughness: 0.2 });
-
-        const railGeo = new THREE.BoxGeometry(0.1, 0.1, 100);
-        const sleeperGeo = new THREE.BoxGeometry(2.0, 0.06, 0.3);
-        const trackBaseGeo = new THREE.BoxGeometry(8, 0.2, 100);
-        
-        const metalMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5 });
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
-
-        /* Track Chunk System */
-        const TRACK_LENGTH = 100;
-        const NUM_CHUNKS = 3;
-        const trackChunks = [];
-
-        function createTrackChunk(zPos) {
-            const group = new THREE.Group();
-            group.position.z = zPos;
-
-            // Ground plane
-            const ground = new THREE.Mesh(trackBaseGeo, groundMat);
-            ground.position.y = -0.1;
-            group.add(ground);
-
-            // Rails for 3 lanes
-            LANES.forEach(x => {
-                const r1 = new THREE.Mesh(railGeo, metalMat);
-                r1.position.set(x - 0.6, 0.05, 0);
-                const r2 = new THREE.Mesh(railGeo, metalMat);
-                r2.position.set(x + 0.6, 0.05, 0);
-                group.add(r1);
-                group.add(r2);
-
-                // Wooden Sleepers
-                for (let z = -TRACK_LENGTH / 2; z < TRACK_LENGTH / 2; z += 2.5) {
-                    const sleeper = new THREE.Mesh(sleeperGeo, woodMat);
-                    sleeper.position.set(x, 0.02, z);
-                    group.add(sleeper);
-                }
-            });
-
-            scene.add(group);
-            return group;
+      if (jumpY > 0 || jumpVel > 0) {
+        wasAirborne = true;
+        jumpY += jumpVel * dt;
+        jumpVel -= 33 * dt;
+        if (jumpY <= 0) {
+          jumpY = 0;
+          jumpVel = 0;
+          if (wasAirborne) {
+            wasAirborne = false;
+            squashVal = 0.74;
+          }
         }
+      }
 
-        for (let i = 0; i < NUM_CHUNKS; i++) {
-            trackChunks.push(createTrackChunk(-i * TRACK_LENGTH));
+      if (overdriveTimer > 0) {
+        overdriveTimer -= dt;
+        shieldMesh.rotation.y += dt * 5;
+        shieldMesh.rotation.x += dt * 3;
+        if (overdriveTimer <= 0) {
+          overdriveTimer = 0;
+          overdrive = 0;
+          shieldMesh.visible = false;
         }
+        updateOverdriveUI();
+      }
 
-        /* =========================================================================
-           CHARACTER / PLAYER CREATION
-           ========================================================================= */
-        const playerGroup = new THREE.Group();
-        scene.add(playerGroup);
+      if (combo > 1) {
+        comboTimer -= dt;
+        if (comboTimer <= 0) {
+          combo = 1;
+          comboBadge.style.opacity = "0";
+        }
+      }
 
-        // Body Pivot (for sliding ducking animation)
-        const bodyPivot = new THREE.Group();
-        playerGroup.add(bodyPivot);
+      const activeSpeed = overdriveTimer > 0 ? speed * 1.32 : speed;
+      speed = Math.min(54, speed + dt * 0.42);
+      score += dt * 18 * combo * (overdriveTimer > 0 ? 1.5 : 1);
+      hudScore.textContent = Math.floor(score);
 
-        // Torso
-        const torsoMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), torsoMat);
-        torso.position.y = 0.9;
-        bodyPivot.add(torso);
+      ballGroup.rotation.x -= (activeSpeed / BALL_RADIUS) * dt * 0.38;
+      ballGroup.rotation.z -= angularVel * dt * 1.1;
 
-        // Head
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xffedd5 });
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), headMat);
-        head.position.y = 1.5;
-        bodyPivot.add(head);
+      for (let i = ZONES.length - 1; i >= 0; i--) {
+        if (score >= ZONES[i].minScore) {
+          if (i > currentZoneIdx) {
+            currentZoneIdx = i;
+            applyZoneTheme(i);
+            showPopup(ZONES[i].name + "!", "#00f5ff");
+            flashScreen("#00f5ff", 0.25);
+          }
+          break;
+        }
+      }
 
-        // Cap
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.1, 0.5), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-        cap.position.set(0, 1.7, -0.05);
-        bodyPivot.add(cap);
+      for (const r of rings) {
+        r.position.z += activeSpeed * dt;
+        if (r.position.z > 10) r.position.z -= RING_COUNT * RING_SPACING;
+      }
+      stars.rotation.z += dt * 0.08;
 
-        // Legs
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-        const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.6, 0.25), legMat);
-        leftLeg.position.set(-0.2, 0.3, 0);
-        const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.6, 0.25), legMat);
-        rightLeg.position.set(0.2, 0.3, 0);
-        bodyPivot.add(leftLeg);
-        bodyPivot.add(rightLeg);
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnWave();
+        spawnTimer = Math.max(0.36, 1.05 - (speed - 26) * 0.02);
+      }
 
-        // Hoverboard Mesh (Hidden by default)
-        const boardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.5 });
-        const hoverboard = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 1.8), boardMat);
-        hoverboard.position.y = 0.04;
-        hoverboard.visible = false;
-        playerGroup.add(hoverboard);
+      placeOnCylinder(playerGroup, playerAngle, BALL_RADIUS + jumpY, 0);
+      playerLight.position.copy(playerGroup.position);
 
-        /* =========================================================================
-           OBSTACLE & ITEM GENERATION SYSTEM
-           ========================================================================= */
-        const activeObstacles = [];
-        const activeCoins = [];
+      trailEmitAccum += dt;
+      if (trailEmitAccum >= 0.016) {
+        trailEmitAccum = 0;
+        const tColor = overdriveTimer > 0 ? 0xffd84d : activeSkinColor;
+        emitTrailNode(playerGroup.position, tColor);
+      }
 
-        // Obstacle Geometries
-        const trainGeo = new THREE.BoxGeometry(1.8, 2.2, 8);
-        const trainMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c });
-        const trainFrontMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
-
-        const lowBarrierGeo = new THREE.BoxGeometry(1.8, 0.8, 0.2);
-        const highBarrierGeo = new THREE.BoxGeometry(1.8, 0.8, 0.2);
-        const barrierMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
-        const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.5);
-        const poleMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
-
-        function createTrain() {
-            const train = new THREE.Group();
-            const body = new THREE.Mesh(trainGeo, trainMat);
-            body.position.y = 1.1;
-            train.add(body);
-
-            const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 0.1), trainFrontMat);
-            windshield.position.set(0, 1.5, 3.96);
-            train.add(windshield);
-
-            train.userData = { type: 'train' };
-            return train;
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.mesh.position.z += activeSpeed * dt;
+        if (o.spinSpeed !== 0) {
+          o.angle += o.spinSpeed * dt;
+          placeOnCylinder(o.mesh, o.angle, o.rOff, o.mesh.position.z);
         }
 
-        function createLowBarrier() {
-            const barrier = new THREE.Group();
-            const bar = new THREE.Mesh(lowBarrierGeo, barrierMat);
-            bar.position.y = 0.5;
-            barrier.add(bar);
+        const oz = o.mesh.position.z;
+        const dAngle = Math.abs(angleDiff(playerAngle, o.angle));
 
-            const p1 = new THREE.Mesh(poleGeo, poleMat);
-            p1.position.set(-0.8, 0.75, 0);
-            const p2 = new THREE.Mesh(poleGeo, poleMat);
-            p2.position.set(0.8, 0.75, 0);
-            barrier.add(p1); barrier.add(p2);
+        if (oz > -o.d * 0.5 - 0.42 && oz < o.d * 0.5 + 0.42) {
+          const hitAngle = dAngle < (o.angularHalf + 0.055);
+          const hitHeight = jumpY < (o.h - 0.12);
 
-            barrier.userData = { type: 'low_barrier' };
-            return barrier;
-        }
-
-        function createHighBarrier() {
-            const barrier = new THREE.Group();
-            // Suspended high so player can slide underneath
-            const bar = new THREE.Mesh(highBarrierGeo, barrierMat);
-            bar.position.y = 1.7; 
-            barrier.add(bar);
-
-            const p1 = new THREE.Mesh(poleGeo, poleMat);
-            p1.position.set(-0.8, 0.75, 0);
-            const p2 = new THREE.Mesh(poleGeo, poleMat);
-            p2.position.set(0.8, 0.75, 0);
-            barrier.add(p1); barrier.add(p2);
-
-            barrier.userData = { type: 'high_barrier' };
-            return barrier;
-        }
-
-        function spawnPattern(zPos) {
-            const laneChoices = [0, 1, 2];
-            const primaryLane = laneChoices[Math.floor(Math.random() * laneChoices.length)];
-            
-            const rand = Math.random();
-
-            if (rand < 0.4) {
-                const train = createTrain();
-                train.position.set(LANES[primaryLane], 0, zPos);
-                scene.add(train);
-                activeObstacles.push(train);
-            } else if (rand < 0.7) {
-                const b = createLowBarrier();
-                b.position.set(LANES[primaryLane], 0, zPos);
-                scene.add(b);
-                activeObstacles.push(b);
+          if (hitAngle && hitHeight) {
+            if (overdriveTimer > 0) {
+              sfx.smash();
+              triggerShake(0.22, 0.38);
+              spawnExplosion(o.mesh.position, 0xffd84d, 18);
+              score += 100;
+              showPopup("SMASH! +100", "#ffd84d");
+              if (navigator.vibrate) navigator.vibrate(35);
+              scene.remove(o.mesh);
+              obstacles.splice(i, 1);
+              continue;
             } else {
-                const b = createHighBarrier();
-                b.position.set(LANES[primaryLane], 0, zPos);
-                scene.add(b);
-                activeObstacles.push(b);
+              spawnExplosion(playerGroup.position, 0xff2b5e, 24);
+              endGame();
+              break;
             }
-
-            // Spawn Coins
-            laneChoices.forEach(lane => {
-                if (lane !== primaryLane || rand > 0.4) {
-                    const coinCount = 3 + Math.floor(Math.random() * 4);
-                    const startZ = zPos - 6;
-                    for (let c = 0; c < coinCount; c++) {
-                        const coin = new THREE.Mesh(coinGeo, coinMat);
-                        coin.position.set(LANES[lane], 0.6, startZ + (c * 1.8));
-                        scene.add(coin);
-                        activeCoins.push(coin);
-                    }
-                }
-            });
+          }
         }
 
-        function resetWorld() {
-            activeObstacles.forEach(o => scene.remove(o));
-            activeCoins.forEach(c => scene.remove(c));
-            activeObstacles.length = 0;
-            activeCoins.length = 0;
+        if (!o.grazed && oz > 0.6) {
+          o.grazed = true;
+          if (dAngle < o.angularHalf + 0.24 && jumpY < o.h + 0.5) {
+            combo = Math.min(8, combo + 1);
+            comboTimer = 4.2;
+            const bonus = 25 * combo;
+            score += bonus;
+            sfx.graze(combo);
+            showPopup(`CLOSE CALL! +${bonus}`, "#00f5ff");
+            comboBadge.textContent = `COMBO x${combo}`;
+            comboBadge.style.opacity = "1";
+            comboBadge.style.transform = "translateX(-50%) scale(1.12)";
+            setTimeout(() => { comboBadge.style.transform = "translateX(-50%) scale(1)"; }, 120);
 
-            for (let z = -30; z > -180; z -= 28) {
-                spawnPattern(z);
+            if (overdriveTimer <= 0) {
+              overdrive = Math.min(100, overdrive + 20);
+              updateOverdriveUI();
+              if (overdrive >= 100) activateOverdrive();
             }
-
-            state.currentLane = 1;
-            state.targetX = LANES[1];
-            playerGroup.position.set(LANES[1], 0, 0);
-            state.posY = 0;
-            state.velocityY = 0;
-            state.isJumping = false;
-            state.isSliding = false;
-            state.slideTimer = 0;
-            state.hasHoverboard = false;
-            state.hoverboardTimer = 0;
-            state.speed = INITIAL_SPEED;
-            state.score = 0;
-            state.coins = 0;
-            state.distance = 0;
-
-            hoverboard.visible = false;
-            document.getElementById('board-status').classList.remove('active');
-            resetBodyTransforms();
+          }
         }
 
-        /* =========================================================================
-           CONTROLS & INPUT HANDLING
-           ========================================================================= */
-        function handleJump() {
-            if (!state.active) return;
-            if (!state.isJumping) {
-                state.velocityY = JUMP_FORCE;
-                state.isJumping = true;
-                if (state.isSliding) {
-                    state.isSliding = false;
-                    resetBodyTransforms();
-                }
-                audio.playJump();
-            }
+        if (oz > 10) {
+          scene.remove(o.mesh);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      for (let i = shards.length - 1; i >= 0; i--) {
+        const s = shards[i];
+        s.mesh.position.z += activeSpeed * dt;
+        s.mesh.rotation.y += dt * 4.5;
+        const sz = s.mesh.position.z;
+        const dA = Math.abs(angleDiff(playerAngle, s.angle));
+
+        if (sz > -1.0 && sz < 1.0 && dA < 0.24 && Math.abs(jumpY + BALL_RADIUS - s.heightOffset) < 1.15) {
+          runShards += 1;
+          totalShards += 1;
+          hudShards.textContent = totalShards;
+          score += 15 * combo;
+          sfx.shard(combo);
+          spawnExplosion(s.mesh.position, 0xffd84d, 7);
+
+          if (overdriveTimer <= 0) {
+            overdrive = Math.min(100, overdrive + 7);
+            updateOverdriveUI();
+            if (overdrive >= 100) activateOverdrive();
+          }
+
+          scene.remove(s.mesh);
+          shards.splice(i, 1);
+          continue;
         }
 
-        function handleSlide() {
-            if (!state.active) return;
-            if (!state.isSliding) {
-                state.isSliding = true;
-                state.slideTimer = SLIDE_DURATION;
-                
-                if (state.isJumping) {
-                    state.velocityY = -JUMP_FORCE * 1.2;
-                }
-            }
+        if (sz > 10) {
+          scene.remove(s.mesh);
+          shards.splice(i, 1);
         }
+      }
+    } else {
+      targetAngle += dt * 0.45;
+      playerAngle = targetAngle;
+      ballGroup.rotation.x -= 6.0 * dt;
+      ballGroup.rotation.z -= 0.8 * dt;
+      for (const r of rings) {
+        r.position.z += 14 * dt;
+        if (r.position.z > 10) r.position.z -= RING_COUNT * RING_SPACING;
+      }
+      placeOnCylinder(playerGroup, playerAngle, BALL_RADIUS, 0);
+      trailEmitAccum += dt;
+      if (trailEmitAccum >= 0.025) {
+        trailEmitAccum = 0;
+        emitTrailNode(playerGroup.position, activeSkinColor);
+      }
+    }
 
-        function handleLaneChange(dir) {
-            if (!state.active) return;
-            if (dir === -1 && state.currentLane > 0) {
-                state.currentLane--;
-            } else if (dir === 1 && state.currentLane < 2) {
-                state.currentLane++;
-            }
-            state.targetX = LANES[state.currentLane];
-        }
+    camAngle += (playerAngle - camAngle) * Math.min(1, dt * 11);
+    const camRadius = TRACK_RADIUS + 2.75 + jumpY * 0.35;
+    let cx = camRadius * Math.sin(camAngle);
+    let cy = camRadius * Math.cos(camAngle);
+    let cz = 6.2;
 
-        function activateHoverboard() {
-            if (!state.active) return;
-            state.hasHoverboard = true;
-            state.hoverboardTimer = HOVERBOARD_DURATION;
-            hoverboard.visible = true;
-            document.getElementById('board-status').classList.add('active');
-            audio.playBoard();
-        }
+    if (shakeTime > 0) {
+      shakeTime -= dt;
+      cx += (Math.random() - 0.5) * shakeIntensity;
+      cy += (Math.random() - 0.5) * shakeIntensity;
+    } else {
+      shakeIntensity = 0;
+    }
 
-        /* Touch Controls */
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let lastTapTime = 0;
+    camera.position.set(cx, cy, cz);
+    camera.up.set(Math.sin(camAngle), Math.cos(camAngle), 0);
+    camera.lookAt(
+      TRACK_RADIUS * Math.sin(camAngle),
+      TRACK_RADIUS * Math.cos(camAngle),
+      -14
+    );
 
-        window.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+    renderer.render(scene, camera);
+  }
 
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTapTime;
-            if (tapLength < 300 && tapLength > 0) {
-                activateHoverboard();
-            }
-            lastTapTime = currentTime;
-        }, { passive: true });
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 
-        window.addEventListener('touchend', (e) => {
-            if (!touchStartX || !touchStartY) return;
-            let diffX = e.changedTouches[0].clientX - touchStartX;
-            let diffY = e.changedTouches[0].clientY - touchStartY;
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > 30) {
-                    if (diffX > 0) handleLaneChange(1);
-                    else handleLaneChange(-1);
-                }
-            } else {
-                if (Math.abs(diffY) > 30) {
-                    if (diffY < 0) handleJump();
-                    else handleSlide();
-                }
-            }
-            touchStartX = 0;
-            touchStartY = 0;
-        }, { passive: true });
-
-        /* Keyboard Controls */
-        window.addEventListener('keydown', (e) => {
-            audio.init();
-            switch(e.code) {
-                case 'ArrowLeft': case 'KeyA': handleLaneChange(-1); break;
-                case 'ArrowRight': case 'KeyD': handleLaneChange(1); break;
-                case 'ArrowUp': case 'KeyW': handleJump(); break;
-                case 'ArrowDown': case 'KeyS': handleSlide(); break;
-                case 'Space': activateHoverboard(); break;
-            }
-        });
-
-        document.getElementById('mobile-hoverboard-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            audio.init();
-            activateHoverboard();
-        });
-
-        /* =========================================================================
-           GAME LOOP & PHYSICS ENGINE
-           ========================================================================= */
-        let clock = new THREE.Clock();
-
-        function resetBodyTransforms() {
-            bodyPivot.rotation.x = 0;
-            bodyPivot.position.y = 0;
-            torso.scale.set(1, 1, 1);
-        }
-
-        function updateGame(delta) {
-            if (!state.active) return;
-
-            if (state.speed < MAX_SPEED) {
-                state.speed += SPEED_INCREMENT * delta * 60;
-            }
-
-            state.distance += state.speed * delta;
-            state.score = Math.floor(state.distance * 1.5);
-
-            // 1. Horizontal Smooth Lane Movement
-            playerGroup.position.x += (state.targetX - playerGroup.position.x) * LANE_SPEED * delta;
-
-            // 2. Vertical Jump & Gravity Physics
-            if (state.isJumping || state.posY > 0) {
-                state.velocityY -= GRAVITY * delta;
-                state.posY += state.velocityY * delta;
-
-                if (state.posY <= 0) {
-                    state.posY = 0;
-                    state.velocityY = 0;
-                    state.isJumping = false;
-                }
-            }
-            playerGroup.position.y = state.posY;
-
-            // 3. Sliding Animation
-            if (state.isSliding) {
-                state.slideTimer -= delta;
-                bodyPivot.rotation.x = -Math.PI / 2.2;
-                bodyPivot.position.y = 0.3;
-
-                if (state.slideTimer <= 0) {
-                    state.isSliding = false;
-                    resetBodyTransforms();
-                }
-            } else {
-                resetBodyTransforms();
-            }
-
-            // Leg running animation
-            if (!state.isJumping && !state.isSliding) {
-                const runAngle = Math.sin(clock.getElapsedTime() * state.speed * 0.8) * 0.6;
-                leftLeg.rotation.x = runAngle;
-                rightLeg.rotation.x = -runAngle;
-            } else {
-                leftLeg.rotation.x = 0;
-                rightLeg.rotation.x = 0;
-            }
-
-            // 4. Hoverboard Timer Update
-            if (state.hasHoverboard) {
-                state.hoverboardTimer -= delta;
-                const progress = (state.hoverboardTimer / HOVERBOARD_DURATION) * 100;
-                document.getElementById('board-progress').style.transform = `scaleX(${progress / 100})`;
-
-                if (state.hoverboardTimer <= 0) {
-                    state.hasHoverboard = false;
-                    hoverboard.visible = false;
-                    document.getElementById('board-status').classList.remove('active');
-                }
-            }
-
-            // 5. Track Chunk Recycling
-            trackChunks.forEach(chunk => {
-                chunk.position.z += state.speed * delta;
-                if (chunk.position.z > TRACK_LENGTH) {
-                    chunk.position.z -= NUM_CHUNKS * TRACK_LENGTH;
-                }
-            });
-
-            // 6. Obstacle Movement & Collision Detection
-            const playerBox = new THREE.Box3();
-            // FIX: Shrink player bounding box during slides closer to ground so high barriers pass cleanly
-            if (state.isSliding) {
-                playerBox.setFromCenterAndSize(
-                    new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 0.2, playerGroup.position.z),
-                    new THREE.Vector3(0.5, 0.4, 0.7)
-                );
-            } else {
-                playerBox.setFromCenterAndSize(
-                    new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 0.9, playerGroup.position.z),
-                    new THREE.Vector3(0.6, 1.6, 0.6)
-                );
-            }
-
-            for (let i = activeObstacles.length - 1; i >= 0; i--) {
-                const obs = activeObstacles[i];
-                obs.position.z += state.speed * delta;
-
-                const obsBox = new THREE.Box3().setFromObject(obs);
-
-                // FIX: Adjust high barrier bounding box so sliding underneath never causes damage
-                if (obs.userData.type === 'high_barrier') {
-                    obsBox.min.y = 1.3; // Raise bottom threshold of high barrier box
-                }
-
-                if (playerBox.intersectsBox(obsBox)) {
-                    if (state.hasHoverboard) {
-                        state.hasHoverboard = false;
-                        hoverboard.visible = false;
-                        document.getElementById('board-status').classList.remove('active');
-                        scene.remove(obs);
-                        activeObstacles.splice(i, 1);
-                        audio.playCrash();
-                        continue;
-                    } else {
-                        triggerGameOver();
-                        return;
-                    }
-                }
-
-                if (obs.position.z > 10) {
-                    scene.remove(obs);
-                    activeObstacles.splice(i, 1);
-                }
-            }
-
-            // 7. Coin Movement & Collection
-            for (let i = activeCoins.length - 1; i >= 0; i--) {
-                const coin = activeCoins[i];
-                coin.position.z += state.speed * delta;
-                coin.rotation.z += delta * 3;
-
-                const dist = playerGroup.position.distanceTo(coin.position);
-                if (dist < 1.2) {
-                    state.coins++;
-                    audio.playCoin();
-                    scene.remove(coin);
-                    activeCoins.splice(i, 1);
-                    continue;
-                }
-
-                if (coin.position.z > 10) {
-                    scene.remove(coin);
-                    activeCoins.splice(i, 1);
-                }
-            }
-
-            const lastObstacleZ = activeObstacles.length > 0 
-                ? Math.min(...activeObstacles.map(o => o.position.z)) 
-                : -30;
-                
-            if (lastObstacleZ > -150) {
-                spawnPattern(lastObstacleZ - 28);
-            }
-
-            document.getElementById('hud-score').innerText = state.score;
-            document.getElementById('hud-coins').innerText = state.coins;
-            document.getElementById('hud-multiplier').innerText = `${(1 + Math.floor(state.score / 500) * 0.1).toFixed(1)}x`;
-        }
-
-        function triggerGameOver() {
-            state.active = false;
-            audio.playCrash();
-
-            const finalScore = Math.floor(state.score);
-            if (finalScore > state.highScore) {
-                state.highScore = finalScore;
-                localStorage.setItem('sr3d_highscore', state.highScore.toString());
-            }
-
-            document.getElementById('go-score').innerText = finalScore;
-            document.getElementById('go-coins').innerText = state.coins;
-            document.getElementById('go-highscore').innerText = state.highScore;
-            document.getElementById('hud-highscore').innerText = state.highScore;
-
-            document.getElementById('gameover-screen').classList.remove('hidden');
-        }
-
-        /* Render Animation Loop */
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = Math.min(clock.getDelta(), 0.1);
-            updateGame(delta);
-
-            // Smoothly track camera along X-axis so character is always clearly visible when changing lanes
-            camera.position.x += (playerGroup.position.x * 0.55 - camera.position.x) * 0.1;
-            camera.lookAt(playerGroup.position.x * 0.25, 1.2, -20);
-
-            renderer.render(scene, camera);
-        }
-
-        document.getElementById('hud-highscore').innerText = state.highScore;
-
-        document.getElementById('start-btn').addEventListener('click', () => {
-            audio.init();
-            resetWorld();
-            state.active = true;
-            document.getElementById('start-screen').classList.add('hidden');
-        });
-
-        document.getElementById('restart-btn').addEventListener('click', () => {
-            audio.init();
-            resetWorld();
-            state.active = true;
-            document.getElementById('gameover-screen').classList.add('hidden');
-        });
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        animate();
-    </script>
+  requestAnimationFrame(animate);
+})();
+</script>
 </body>
-</html>
-```
+            </html>
